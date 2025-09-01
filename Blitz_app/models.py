@@ -86,3 +86,7 @@ class Trade(db.Model):
     amount = db.Column(db.Float, nullable=False)
     pnl = db.Column(db.Float, default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# Import bot command models
+from .models.bot_command import BotCommand, BotStatus, OrderPersistence

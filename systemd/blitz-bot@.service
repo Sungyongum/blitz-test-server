@@ -1,0 +1,26 @@
+[Unit]
+Description=Blitz Trading Bot Worker for User %i
+After=network.target blitz-bot-manager.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=blitz
+Group=blitz
+WorkingDirectory=/opt/blitz-test-server
+Environment=DATABASE_URL=sqlite:////opt/blitz-test-server/instance/production.db
+ExecStart=/opt/blitz-test-server/venv/bin/python /opt/blitz-test-server/bot_worker.py %i
+Restart=no
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/blitz-test-server/instance
+ReadWritePaths=/opt/blitz-test-server/logs
+
+[Install]
+WantedBy=multi-user.target

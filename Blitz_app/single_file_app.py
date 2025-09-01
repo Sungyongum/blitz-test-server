@@ -16,6 +16,14 @@ from email.mime.text import MIMEText
 from sqlalchemy.dialects.sqlite import JSON
 from flask import session
 
+# Import our new services
+try:
+    USE_DB_COMMANDS = True
+except ImportError:
+    # Fallback to old system if imports fail
+    USE_DB_COMMANDS = False
+    print("Warning: Database command system not available, using legacy threading")
+
 force_refresh_flags  = {}  # user_id → bool
 single_refresh_flags = {}  # user_id → bool
 
@@ -71,6 +79,198 @@ class User(db.Model, UserMixin):
         self.password_hash = generate_password_hash(pw)
     def check_password(self, pw):
         return check_password_hash(self.password_hash, pw)
+
+
+# --- Bot Command Models ---
+class BotCommand(db.Model):
+    """Bot command queue for database-driven bot control"""
+    __tablename__ = 'bot_command'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    command_type = db.Column(db.String(32), nullable=False)  # 'start', 'stop', 'exit_and_stop', 'refresh'
+    command_data = db.Column(JSON, nullable=True)  # Additional command parameters
+    status = db.Column(db.String(16), default='pending')  # 'pending', 'processing', 'completed', 'failed'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processed_at = db.Column(db.DateTime, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    
+    # Relationship
+    user = db.relationship('User', backref='bot_commands')
+    
+    def __repr__(self):
+        return f'<BotCommand {self.id}: {self.command_type} for user {self.user_id}>'
+
+
+class BotStatus(db.Model):
+    """Current status of user bots"""
+    __tablename__ = 'bot_status'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    status = db.Column(db.String(32), default='stopped')  # 'stopped', 'starting', 'running', 'stopping', 'error'
+    pid = db.Column(db.Integer, nullable=True)  # Process ID when running
+    last_heartbeat = db.Column(db.DateTime, nullable=True)
+    last_error = db.Column(db.Text, nullable=True)
+    bot_data = db.Column(JSON, nullable=True)  # Additional bot state data
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('bot_status', uselist=False))
+    
+    def __repr__(self):
+        return f'<BotStatus {self.user_id}: {self.status}>'
+
+
+class OrderPersistence(db.Model):
+    """Persist planned orders and TP data for recovery"""
+    __tablename__ = 'order_persistence'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    order_type = db.Column(db.String(16), nullable=False)  # 'entry', 'tp', 'sl'
+    round_number = db.Column(db.Integer, nullable=False)
+    order_data = db.Column(JSON, nullable=False)  # Full order parameters
+    exchange_order_id = db.Column(db.String(64), nullable=True)  # Order ID from exchange
+    status = db.Column(db.String(16), default='planned')  # 'planned', 'placed', 'filled', 'cancelled'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref='persisted_orders')
+    
+    def __repr__(self):
+        return f'<OrderPersistence {self.id}: {self.order_type} round {self.round_number} for user {self.user_id}>'
+
+
+# --- Bot Command Service ---
+class BotCommandService:
+    """Service for managing bot commands via database"""
+    
+    @staticmethod
+    def queue_command(user_id: int, command_type: str, command_data: dict = None):
+        """Queue a bot command for execution"""
+        try:
+            # Cancel any pending commands of the same type for this user
+            BotCommand.query.filter_by(
+                user_id=user_id, 
+                command_type=command_type, 
+                status='pending'
+            ).update({'status': 'cancelled'})
+            
+            # Create new command
+            command = BotCommand(
+                user_id=user_id,
+                command_type=command_type,
+                command_data=command_data or {}
+            )
+            db.session.add(command)
+            db.session.commit()
+            logger.info(f"Queued {command_type} command for user {user_id}")
+            return command
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to queue command {command_type} for user {user_id}: {e}")
+            raise
+    
+    @staticmethod
+    def get_pending_commands(user_id: int = None, limit: int = 10):
+        """Get pending commands, optionally filtered by user"""
+        query = BotCommand.query.filter_by(status='pending')
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        return query.order_by(BotCommand.created_at).limit(limit).all()
+    
+    @staticmethod
+    def mark_command_processing(command_id: int):
+        """Mark a command as being processed"""
+        try:
+            command = BotCommand.query.get(command_id)
+            if command and command.status == 'pending':
+                command.status = 'processing'
+                command.processed_at = datetime.utcnow()
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to mark command {command_id} as processing: {e}")
+            return False
+    
+    @staticmethod
+    def mark_command_completed(command_id: int, error_message: str = None):
+        """Mark a command as completed or failed"""
+        try:
+            command = BotCommand.query.get(command_id)
+            if command:
+                command.status = 'failed' if error_message else 'completed'
+                command.error_message = error_message
+                if not command.processed_at:
+                    command.processed_at = datetime.utcnow()
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to mark command {command_id} as completed: {e}")
+            return False
+    
+    @staticmethod
+    def update_bot_status(user_id: int, status: str, pid: int = None, bot_data: dict = None, error_message: str = None):
+        """Update bot status for a user"""
+        try:
+            bot_status = BotStatus.query.filter_by(user_id=user_id).first()
+            if not bot_status:
+                bot_status = BotStatus(user_id=user_id)
+                db.session.add(bot_status)
+            
+            bot_status.status = status
+            bot_status.last_heartbeat = datetime.utcnow()
+            bot_status.updated_at = datetime.utcnow()
+            
+            if pid is not None:
+                bot_status.pid = pid
+            if bot_data is not None:
+                bot_status.bot_data = bot_data
+            if error_message is not None:
+                bot_status.last_error = error_message
+                
+            db.session.commit()
+            return bot_status
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to update bot status for user {user_id}: {e}")
+            raise
+    
+    @staticmethod
+    def get_bot_status(user_id: int):
+        """Get current bot status for a user"""
+        return BotStatus.query.filter_by(user_id=user_id).first()
+    
+    @staticmethod
+    def get_all_bot_statuses():
+        """Get all bot statuses"""
+        return BotStatus.query.all()
+    
+    @staticmethod
+    def heartbeat(user_id: int, bot_data: dict = None):
+        """Update bot heartbeat"""
+        try:
+            bot_status = BotStatus.query.filter_by(user_id=user_id).first()
+            if bot_status:
+                bot_status.last_heartbeat = datetime.utcnow()
+                if bot_data:
+                    bot_status.bot_data = bot_data
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to update heartbeat for user {user_id}: {e}")
+            return False
 
 # --- Flask-Admin 뷰 등록 ---
 admin = Admin(app, name="관리자 대시보드", template_mode="bootstrap3")
@@ -741,13 +941,29 @@ def index():
 
     # 6) 봇 실행 중 여부 확인
     bots = []
-    for uid, ev in bot_events.items():
-        if uid == current_user.id and not ev.is_set():
-            bots.append({
-                'symbol':         current_user.symbol,
-                'status':         status_text,
-                'config_summary': f"{current_user.side.upper()}, TP {current_user.take_profit}",
-            })
+    if USE_DB_COMMANDS:
+        # New database-driven approach
+        try:
+            bot_status = BotCommandService.get_bot_status(current_user.id)
+            if bot_status and bot_status.status in ['running', 'starting']:
+                bots.append({
+                    'symbol':         current_user.symbol,
+                    'status':         bot_status.status,
+                    'config_summary': f"{current_user.side.upper()}, TP {current_user.take_profit}",
+                    'last_heartbeat': bot_status.last_heartbeat,
+                    'pid':           bot_status.pid,
+                })
+        except Exception as e:
+            logger.error(f"Failed to get bot status for user {current_user.id}: {e}")
+    else:
+        # Legacy threading approach
+        for uid, ev in bot_events.items():
+            if uid == current_user.id and not ev.is_set():
+                bots.append({
+                    'symbol':         current_user.symbol,
+                    'status':         status_text,
+                    'config_summary': f"{current_user.side.upper()}, TP {current_user.take_profit}",
+                })
 
     saved_configs = []
 
@@ -767,47 +983,87 @@ def index():
 @app.route('/start_bot', methods=['POST'])
 @login_required
 def start_bot():
-    # 1) 남아 있는 이벤트(혹은 죽은 스레드)를 강제로 중단 & 제거
-    old_ev = bot_events.pop(current_user.id, None)
-    if old_ev:
-        old_ev.set()
+    if USE_DB_COMMANDS:
+        # New database-driven approach
+        try:
+            # 1) Collect grid values (empty strings replaced with 0)
+            grids = []
+            for i in range(1, current_user.rounds + 1):
+                raw_amount = request.form.get(f'amount{i}', '').strip()
+                raw_gap    = request.form.get(f'gap{i}',    '').strip()
+                amount = float(raw_amount) if raw_amount else 0
+                gap    = float(raw_gap)    if raw_gap    else 0
+                grids.append({'amount': amount, 'gap': gap})
 
-    # 2) 새 Event + 설정 준비
-    ev = Event()
-    cfg = {
-        'telegram_token':   current_user.telegram_token,
-        'telegram_chat_id': current_user.telegram_chat_id,
-        'api_key':          current_user.api_key,
-        'api_secret':       current_user.api_secret,
-        'symbol':           current_user.symbol,
-        'side':             current_user.side,
-        'take_profit':      current_user.take_profit,
-        'stop_loss':        current_user.stop_loss,
-        'repeat':           current_user.repeat,
-        'leverage':         current_user.leverage,
-        'rounds':           current_user.rounds,
-    }
+            # 2) Prepare command data
+            command_data = {
+                'grids': grids,
+                'user_config': {
+                    'telegram_token':   current_user.telegram_token,
+                    'telegram_chat_id': current_user.telegram_chat_id,
+                    'api_key':          current_user.api_key,
+                    'api_secret':       current_user.api_secret,
+                    'symbol':           current_user.symbol,
+                    'side':             current_user.side,
+                    'take_profit':      current_user.take_profit,
+                    'stop_loss':        current_user.stop_loss,
+                    'repeat':           current_user.repeat,
+                    'leverage':         current_user.leverage,
+                    'rounds':           current_user.rounds,
+                }
+            }
 
-    # 3) 그리드 값 수집 (빈 문자열일 땐 0 대체)
-    grids = []
-    for i in range(1, current_user.rounds + 1):
-        raw_amount = request.form.get(f'amount{i}', '').strip()
-        raw_gap    = request.form.get(f'gap{i}',    '').strip()
-        amount = float(raw_amount) if raw_amount else 0
-        gap    = float(raw_gap)    if raw_gap    else 0
-        grids.append({'amount': amount, 'gap': gap})
-    cfg['grids'] = grids
+            # 3) Queue command in database
+            BotCommandService.queue_command(current_user.id, 'start', command_data)
+            flash('봇 시작 명령이 대기열에 추가되었습니다', 'success')
+            
+        except Exception as e:
+            logger.error(f"Failed to queue start command for user {current_user.id}: {e}")
+            flash('봇 시작 명령 처리 중 오류가 발생했습니다', 'danger')
+            
+    else:
+        # Legacy threading approach (fallback)
+        # 1) 남아 있는 이벤트(혹은 죽은 스레드)를 강제로 중단 & 제거
+        old_ev = bot_events.pop(current_user.id, None)
+        if old_ev:
+            old_ev.set()
 
-    # 4) 스레드 실행
-    t = threading.Thread(
-        target=run_bot,
-        args=(cfg, ev, current_user.id),
-        daemon=True,
-    )
-    bot_events[current_user.id] = ev
-    t.start()
+        # 2) 새 Event + 설정 준비
+        ev = Event()
+        cfg = {
+            'telegram_token':   current_user.telegram_token,
+            'telegram_chat_id': current_user.telegram_chat_id,
+            'api_key':          current_user.api_key,
+            'api_secret':       current_user.api_secret,
+            'symbol':           current_user.symbol,
+            'side':             current_user.side,
+            'take_profit':      current_user.take_profit,
+            'stop_loss':        current_user.stop_loss,
+            'repeat':           current_user.repeat,
+            'leverage':         current_user.leverage,
+            'rounds':           current_user.rounds,
+        }
 
-    flash('봇 시작됨', 'success')
+        # 3) 그리드 값 수집 (빈 문자열일 땐 0 대체)
+        grids = []
+        for i in range(1, current_user.rounds + 1):
+            raw_amount = request.form.get(f'amount{i}', '').strip()
+            raw_gap    = request.form.get(f'gap{i}',    '').strip()
+            amount = float(raw_amount) if raw_amount else 0
+            gap    = float(raw_gap)    if raw_gap    else 0
+            grids.append({'amount': amount, 'gap': gap})
+        cfg['grids'] = grids
+
+        # 4) 스레드 실행
+        t = threading.Thread(
+            target=run_bot,
+            args=(cfg, ev, current_user.id),
+            daemon=True,
+        )
+        bot_events[current_user.id] = ev
+        t.start()
+        flash('봇 시작됨', 'success')
+        
     return redirect(url_for('index'))
 
 
@@ -815,23 +1071,32 @@ def start_bot():
 @app.route('/stop_bot', methods=['POST'])
 @login_required
 def stop_bot():
-    ev = bot_events.pop(current_user.id, None)
-    if ev:
-        ev.set()
-        # ▶ 봇 중단 시점에 남아 있는 주문도 모두 취소
-        ex = ccxt.gateio({
-            'apiKey': current_user.api_key,
-            'secret': current_user.api_secret,
-            'enableRateLimit': True,
-            'options': {'defaultType':'swap'}
-        })
-        ex.load_markets()
-        sym = normalize_symbol(current_user.symbol, ex.markets)
-        cancel_entry_orders(ex, sym, current_user.side)
-        cancel_tp_sl_orders(ex, sym)
-        logger.info(f"사용자 {current_user.id} 주문 전부 취소 완료 (stop_bot)")
-
-        flash('봇 중지됨', 'warning')
+    if USE_DB_COMMANDS:
+        # New database-driven approach
+        try:
+            BotCommandService.queue_command(current_user.id, 'stop')
+            flash('봇 중지 명령이 대기열에 추가되었습니다', 'warning')
+        except Exception as e:
+            logger.error(f"Failed to queue stop command for user {current_user.id}: {e}")
+            flash('봇 중지 명령 처리 중 오류가 발생했습니다', 'danger')
+    else:
+        # Legacy threading approach (fallback)
+        ev = bot_events.pop(current_user.id, None)
+        if ev:
+            ev.set()
+            # ▶ 봇 중단 시점에 남아 있는 주문도 모두 취소
+            ex = ccxt.gateio({
+                'apiKey': current_user.api_key,
+                'secret': current_user.api_secret,
+                'enableRateLimit': True,
+                'options': {'defaultType':'swap'}
+            })
+            ex.load_markets()
+            sym = normalize_symbol(current_user.symbol, ex.markets)
+            cancel_entry_orders(ex, sym, current_user.side)
+            cancel_tp_sl_orders(ex, sym)
+            logger.info(f"사용자 {current_user.id} 주문 전부 취소 완료 (stop_bot)")
+            flash('봇 중지됨', 'warning')
     return redirect(url_for('index'))
 
 @app.route('/stop_repeat', methods=['POST'])
@@ -941,57 +1206,67 @@ def status_api():
 @app.route('/exit_and_stop', methods=['POST'])
 @login_required
 def exit_and_stop():
-    ev = bot_events.pop(current_user.id, None)
-    if ev:
-        ev.set()
+    if USE_DB_COMMANDS:
+        # New database-driven approach
+        try:
+            BotCommandService.queue_command(current_user.id, 'exit_and_stop')
+            flash('포지션 청산 및 봇 중지 명령이 대기열에 추가되었습니다', 'warning')
+        except Exception as e:
+            logger.error(f"Failed to queue exit_and_stop command for user {current_user.id}: {e}")
+            flash('청산 명령 처리 중 오류가 발생했습니다', 'danger')
+    else:
+        # Legacy approach (fallback)
+        ev = bot_events.pop(current_user.id, None)
+        if ev:
+            ev.set()
 
-    try:
-        ex = ccxt.gateio({
-            'apiKey': current_user.api_key,
-            'secret': current_user.api_secret,
-            'enableRateLimit': True,
-            'options': {'defaultType':'swap'}
-        })
-        ex.load_markets()
-        sym = normalize_symbol(current_user.symbol, ex.markets)
-        pos = get_position(ex, sym, current_user.side)
-
-        if pos and float(pos['contracts']) > 0:
-            side = 'sell' if current_user.side == 'long' else 'buy'
-            amount = float(pos['contracts'])
-
-            # ▶ 시장가 청산
-            ex.create_order(sym, 'market', side, amount, None, {
-                'type': 'swap',
-                'reduce_only': True
+        try:
+            ex = ccxt.gateio({
+                'apiKey': current_user.api_key,
+                'secret': current_user.api_secret,
+                'enableRateLimit': True,
+                'options': {'defaultType':'swap'}
             })
+            ex.load_markets()
+            sym = normalize_symbol(current_user.symbol, ex.markets)
+            pos = get_position(ex, sym, current_user.side)
 
-            # ▶ 손익 계산용 정보 수집
-            exit_price = ex.fetch_ticker(sym)['last']
-            entry_price = float(pos['entryPrice'])
-            realized_pnl = ((exit_price - entry_price) if current_user.side == 'long' 
-                            else (entry_price - exit_price)) * float(pos['contracts'])
+            if pos and float(pos['contracts']) > 0:
+                side = 'sell' if current_user.side == 'long' else 'buy'
+                amount = float(pos['contracts'])
 
-            # ▶ 손익 기록 저장
-            record_trade(
-                symbol=sym,
-                side=current_user.side,
-                entry=entry_price,
-                exit_p=exit_price,
-                size=amount,
-                pos=pos,
-                api_key=current_user.api_key,
-                api_secret=current_user.api_secret
-            )
+                # ▶ 시장가 청산
+                ex.create_order(sym, 'market', side, amount, None, {
+                    'type': 'swap',
+                    'reduce_only': True
+                })
 
-            flash(f"포지션을 시장가로 청산했습니다. PnL={realized_pnl:.4f}", 'success')
+                # ▶ 손익 계산용 정보 수집
+                exit_price = ex.fetch_ticker(sym)['last']
+                entry_price = float(pos['entryPrice'])
+                realized_pnl = ((exit_price - entry_price) if current_user.side == 'long' 
+                                else (entry_price - exit_price)) * float(pos['contracts'])
 
-        else:
-            flash('청산할 포지션이 없습니다.', 'info')
+                # ▶ 손익 기록 저장
+                record_trade(
+                    symbol=sym,
+                    side=current_user.side,
+                    entry=entry_price,
+                    exit_p=exit_price,
+                    size=amount,
+                    pos=pos,
+                    api_key=current_user.api_key,
+                    api_secret=current_user.api_secret
+                )
 
-    except Exception as e:
-        logger.error(f"Exit and stop error: {e}")
-        flash('청산 중 오류가 발생했습니다.', 'danger')
+                flash(f"포지션을 시장가로 청산했습니다. PnL={realized_pnl:.4f}", 'success')
+
+            else:
+                flash('청산할 포지션이 없습니다.', 'info')
+
+        except Exception as e:
+            logger.error(f"Exit and stop error: {e}")
+            flash('청산 중 오류가 발생했습니다.', 'danger')
 
     return redirect(url_for('index'))
 
