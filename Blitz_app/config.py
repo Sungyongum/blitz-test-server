@@ -26,6 +26,11 @@ SECRET_KEY = (
     or "ce05772949e7d8da54b46d410ed7e12805a133b233fe296c832a70f1ec73da5f"
 )
 
+# ===== CSRF Protection =====
+WTF_CSRF_ENABLED = True
+WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
+WTF_CSRF_SECRET_KEY = SECRET_KEY
+
 # (선택) 8000과 8001을 동시에 쓸 때 쿠키 충돌 방지용 이름 지정 가능
 SESSION_COOKIE_NAME = os.environ.get("BLITZ_SESSION_COOKIE", "session")
 
