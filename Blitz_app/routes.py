@@ -453,8 +453,7 @@ def start_bot():
 @main.route('/stop', methods=['GET', 'POST'])
 @login_required
 def stop_bot():
-    """
-    Legacy stop route - redirects to use SimpleBotManager API for consistency.
+    Legacy stop route - uses SimpleBotManager API internally for consistency.
     This prevents dual bot management systems from conflicting.
     """
     # Use SimpleBotManager instead of legacy bot_events
