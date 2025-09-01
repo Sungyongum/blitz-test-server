@@ -308,3 +308,21 @@ Traceback (most recent call last):
 werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
 2025-09-01 15:03:06,694 INFO 127.0.0.1 - - [01/Sep/2025 15:03:06] "GET /static/style.css HTTP/1.1" 200 -
 2025-09-01 15:03:06,696 INFO 127.0.0.1 - - [01/Sep/2025 15:03:06] "[35m[1mGET /static/logo.png HTTP/1.1[0m" 500 -
+2025-09-01 15:04:18,808 INFO Queued start command for user 2
+2025-09-01 15:04:28,450 INFO Starting bot manager
+2025-09-01 15:04:28,465 INFO Cleaned up 0 old commands
+2025-09-01 15:04:28,468 INFO Restarting unhealthy bot for user 2
+2025-09-01 15:04:28,468 INFO No bot process found for user 2
+2025-09-01 15:04:28,469 INFO Starting bot process for user 2
+2025-09-01 15:04:28,475 INFO Started bot process for user 2 with PID 3993
+2025-09-01 15:04:29,307 INFO Starting bot worker for user 2
+2025-09-01 15:04:29,324 INFO Processing command 1: start
+2025-09-01 15:04:29,334 INFO Started bot for user 2
+2025-09-01 15:04:34,341 WARNING Bot thread for user 2 died unexpectedly
+2025-09-01 15:05:55,180 INFO Queued stop command for user 2
+2025-09-01 15:05:58,494 INFO Stopping bot for user 2 due to stop command
+2025-09-01 15:05:58,495 INFO Stopping bot process for user 2 (PID 3993)
+2025-09-01 15:05:58,495 INFO Received signal 15, shutting down bot worker for user 2
+2025-09-01 15:05:58,495 INFO Shutting down bot worker for user 2
+2025-09-01 15:05:58,497 INFO Shutting down bot worker for user 2
+2025-09-01 15:05:58,709 INFO Bot process for user 2 terminated gracefully
