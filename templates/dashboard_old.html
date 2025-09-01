@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>📊 Supertrader Dashboard</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+</head>
+<body class="bg-dark text-light">
+  <div class="container py-4">
+
+    <div class="d-flex justify-content-between mb-3">
+      <h3>🚀 Supertrader Dashboard</h3>
+      <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">설정으로</a>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col">
+        <div class="card bg-secondary text-light">
+          <div class="card-body">
+            <h5 class="card-title">상태</h5>
+            <p class="card-text">{{ status_text }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card bg-secondary text-light">
+          <div class="card-body">
+            <h5 class="card-title">총 자산</h5>
+            <p class="card-text">{{ total_usdt|round(2) }} USDT</p>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card bg-secondary text-light">
+          <div class="card-body">
+            <h5 class="card-title">Equity</h5>
+            <p class="card-text">{{ equity|round(2) }} USDT</p>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card bg-secondary text-light">
+          <div class="card-body">
+            <h5 class="card-title">Free</h5>
+            <p class="card-text">{{ free_usdt|round(2) }} USDT</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-secondary mb-4">
+      <div class="card-body">
+        <h5>📊 과거 거래 내역</h5>
+        <div class="table-responsive" style="max-height:50vh; overflow:auto;">
+          <table class="table table-dark table-sm mb-0">
+            <thead>
+              <tr>
+                <th>날짜</th><th>심볼</th><th>방향</th><th>진입가</th><th>청산가</th>
+                <th>수량</th><th>PnL</th><th>수수료</th><th>잔액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in trades %}
+              <tr>
+                <td>{{ t.timestamp|datetimeformat }}</td>
+                <td>{{ t.symbol }}</td>
+                <td>{{ t.side|capitalize }}</td>
+                <td>{{ t.entry_price }}</td>
+                <td>{{ t.exit_price }}</td>
+                <td>{{ t.size }}</td>
+                <td>{{ '%.4f'|format(t.pnl) }}</td>
+                <td>{{ '%.4f'|format(t.fee) }}</td>
+                <td>{{ '%.4f'|format(t.realized_balance) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🔐 회원가입 | Blitz Trade Bot</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"/>
+  <style>
+    body { background: #f5f5f5; }
+    .card { max-width: 400px; margin: 3rem auto; }
+    .card-body { padding: 2rem; }
+    .logo { text-align: center; margin-bottom: 1rem; }
+    .logo img { max-width: 120px; }
+  </style>
+</head>
+<body>
+
+<!-- 회원가입 완료 모달 -->
+<div class="modal fade" id="registerSuccessModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="successModalLabel">회원가입 완료</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        ✉️ 이메일 인증을 완료해야 로그인이 가능합니다.<br>
+        받은 편지함을 확인해주세요.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Blitz Trade Logo">
+    </div>
+    <h4 class="card-title text-center mb-4">회원가입</h4>
+
+    <form method="post" action="{{ url_for('main.register') }}" id="regForm">
+        <div class="form-group">
+        <label for="exchange">거래소 선택</label>
+        <select id="exchange" name="exchange" class="form-control" required>
+          <option value="bybit">Bybit</option>
+          <option value="bingx">BingX</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="email">이메일</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="이메일" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="비밀번호" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password2">비밀번호 확인</label>
+        <input type="password" id="password2" name="password2" class="form-control" placeholder="비밀번호 확인" required>
+        <small id="pwHelp" class="form-text text-danger" style="display:none;">비밀번호가 일치하지 않습니다.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="uid">거래소 UID</label>
+        <input type="text" id="uid" name="uid" class="form-control" placeholder="Bybit UID" required>
+      </div>
+
+      <div class="form-group">
+        <label for="telegram_token">텔레그램 토큰 <small class="text-muted">(선택)</small></label>
+        <input type="text" id="telegram_token" name="telegram_token" class="form-control" placeholder="Telegram Bot Token">
+      </div>
+
+      <div class="form-group">
+        <label for="telegram_chat_id">텔레그램 채팅ID <small class="text-muted">(선택)</small></label>
+        <input type="text" id="telegram_chat_id" name="telegram_chat_id" class="form-control" placeholder="Telegram Chat ID">
+      </div>
+
+      <div class="form-group">
+        <label for="api_key">거래소 API Key</label>
+        <input type="text" id="api_key" name="api_key" class="form-control" placeholder="Bybit API Key" required>
+      </div>
+
+      <div class="form-group">
+        <label for="api_secret">거래소 API Secret</label>
+        <input type="text" id="api_secret" name="api_secret" class="form-control" placeholder="Bybit API Secret" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">회원가입</button>
+    </form>
+
+    <hr>
+
+    <p class="text-center mb-0">
+      이미 계정이 있으신가요?
+      <a href="{{ url_for('main.login') }}">로그인</a>
+    </p>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+<!-- 모달 띄우기 (Jinja2 외부 처리) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    {% if category == 'register_success' %}
+      <script>
+        $(document).ready(function() {
+          $('#registerSuccessModal').modal('show');
+        });
+      </script>
+    {% endif %}
+  {% endfor %}
+{% endwith %}
+
+<!-- 비밀번호 확인 -->
+<script>
+  document.getElementById('regForm').addEventListener('submit', function(e){
+    const pw1 = document.getElementById('password').value;
+    const pw2 = document.getElementById('password2').value;
+    if (pw1 !== pw2) {
+      e.preventDefault();
+      document.getElementById('pwHelp').style.display = 'block';
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+""<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>프록시 목록</title>
+  <style>
+    body { font-family: Arial; padding: 40px; }
+    table { border-collapse: collapse; margin-top: 10px; }
+    table, th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
+    h2 { margin-top: 40px; }
+    button { margin-left: 5px; padding: 4px 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>🔐 사용 중인 프록시 목록</h2>
+  <table>
+    <tr>
+      <th>User ID</th><th>IP</th><th>Port</th><th>Username</th><th>조작</th>
+    </tr>
+    {% for p in proxies if p.assigned_user_id %}
+    <tr>
+      <td>{{ p.assigned_user_id }}</td>
+      <td>{{ p.ip }}</td>
+      <td>{{ p.port }}</td>
+      <td>{{ p.username }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('main.force_unassign_proxy', proxy_id=p.id) }}" style="display:inline;" onsubmit="return confirm('정말로 이 프록시를 초기화하시겠습니까?');">
+          <button type="submit">강제 초기화</button>
+        </form>
+        <form method="POST" action="{{ url_for('main.force_reassign_proxy', proxy_id=p.id) }}" style="display:inline;" onsubmit="return confirm('이 프록시를 미사용 상태로 이동하시겠습니까?');">
+          <button type="submit">재할당</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>❄️ 미사용 프록시 (할당되지 않음)</h2>
+  <table>
+    <tr>
+      <th>IP</th><th>Port</th><th>Username</th>
+    </tr>
+    {% for p in proxies if not p.assigned_user_id %}
+    <tr>
+      <td>{{ p.ip }}</td>
+      <td>{{ p.port }}</td>
+      <td>{{ p.username }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+</body>
+</html>""

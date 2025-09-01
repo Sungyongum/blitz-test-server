@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.umd.js"></script>
+  <title>🚀 Blitz Trade Bot Dashboard</title>
+  <!-- Bootstrap 4 -->
+  <link
+    rel="stylesheet"
+    href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+  />
+  <style>
+    body { background: #121212; color: #f1f1f1; }
+    .panel { background: #1e1e1e; padding: 1.5rem; border-radius: .5rem; margin-bottom: 1rem; }
+    .nav-tabs .nav-link { color: #f1f1f1; }
+    .nav-tabs .nav-link.active { background: #2a2a2a; }
+    .table-dark th, .table-dark td { color: #f1f1f1; }
+    pre { background: #111; color: #f1f1f1; }
+    label { font-weight: 500; font-size: .9rem; }
+    #tv_chart { width: 100%; height: 50vh; }
+    .btn-block + .btn-block { margin-top: .5rem; }
+    hr { border-color: #333; }
+  </style>
+</head>
+<body>
+  <!-- 부트스트랩 토스트 알림 -->
+  <div aria-live="polite" aria-atomic="true"
+      style="position: fixed; bottom: 1rem; right: 1rem; z-index: 1080; pointer-events: none;">
+    <div id="toast-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true"
+            data-delay="3000" style="pointer-events: auto;">
+          <div class="toast-header">
+            <strong class="mr-auto">
+              {% if category == 'success' %}✅ 성공
+              {% elif category == 'danger' %}❌ 오류
+              {% elif category == 'warning' %}⚠️ 경고
+              {% else %}ℹ️ 알림
+              {% endif %}
+            </strong>
+            <small>지금</small>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="toast-body">
+            {{ message }}
+          </div>
+        </div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="container-fluid py-4">
+
+    <!-- 상단 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex align-items-center">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" style="height:32px; margin-right:12px;">
+        <h3>Blitz Trade Bot Dashboard</h3>
+      </div>
+      <div>
+        <span>상태:
+          <span id="status-badge" class="badge badge-info">{{ status_text or '대기중' }}</span>
+        </span>
+        <a href="{{ url_for('main.pnl_summary') }}" class="btn btn-info btn-sm mt-2">📊 손익 현황 보기</a>
+        <a href="{{ url_for('main.edit_profile') }}" class="btn btn-outline-light btn-sm ml-2">회원정보 수정</a>
+        <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm ml-3">로그아웃</a>
+        {% if current_user.email=='admin@admin.com' %}
+          <a href="{{ url_for('main.admin_page') }}" class="btn btn-outline-warning btn-sm ml-2">관리자</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 설정 폼 자동 로드 스크립트 (기존 스니펫 유지) -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        renderGrids();
+        const roundsEl = document.getElementById('roundsInput');
+        if (roundsEl) roundsEl.addEventListener('input', renderGrids);
+      });
+      // (기존 심볼 검색/선택 관련 핸들러는 실제 요소들이 별도 템플릿에 있었다면 그대로 유지)
+    </script>
+
+    <!-- 1) 설정 폼 + 차트 -->
+    <div class="row">
+      <!-- 왼쪽: 설정 폼 -->
+      <div class="col-lg-4">
+        <div class="panel">
+          <h5 class="mb-3">💾 설정</h5>
+
+          <!-- 🔧 AJAX로 직렬화해서 쓰기 위해 id 부여 -->
+          <form id="settings-form" action="{{ url_for('main.index') }}" method="post">
+            <h6>환영합니다, {{ current_user.email }} 님</h6>
+            <p class="mb-2"><b>거래소:</b>
+              <span class="badge badge-warning">
+                {% if current_user.exchange == 'bybit' %}Bybit
+                {% elif current_user.exchange == 'bingx' %}BingX
+                {% else %}{{ current_user.exchange|capitalize }}
+                {% endif %}
+              </span>
+            </p>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="symbolSelect">심볼</label>
+                <select name="symbol" class="form-control" style="min-width:150px;">
+                  {% for item in symbols %}
+                    <option value="{{ item.symbol }}" {% if current_user.symbol == item.symbol %}selected{% endif %}>
+                      {{ item.symbol }} ({{ item.price }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group col">
+                <label>방향</label>
+                <select name="side" class="form-control form-control-sm">
+                  <option value="long" {% if current_user.side=='long' %}selected{% endif %}>Long</option>
+                  <option value="short" {% if current_user.side=='short' %}selected{% endif %}>Short</option>
+                </select>
+              </div>
+            </div>
+            <hr>
+            <div class="form-group">
+              <label>레버리지</label>
+              <select name="leverage" class="form-control form-control-sm">
+                {% for lv in [1,2,3,5,10,15,20,25,50] %}
+                  <option value="{{ lv }}" {% if current_user.leverage==lv %}selected{% endif %}>{{ lv }}배</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>익절 (%)</label>
+              <input type="number" name="take_profit" class="form-control form-control-sm"
+                     step="0.1" min="0.1"
+                     value="{{ current_user.take_profit|replace('%','') }}" required>
+            </div>
+            <div class="form-group form-check">
+              <input type="checkbox" class="form-check-input" id="repeatCheck" name="repeat"
+                     {% if current_user.repeat %}checked{% endif %}>
+              <label class="form-check-label" for="repeatCheck">반복 실행</label>
+            </div>
+            <div class="form-group">
+              <label for="roundsInput">그리드 회차 수</label>
+              <input type="number" id="roundsInput" name="rounds" class="form-control form-control-sm"
+                     value="{{ current_user.rounds }}" min="1">
+            </div>
+            <div id="gridContainer" data-initial-grids='{{ current_user.grids|default([])|tojson|safe }}'></div>
+            <div class="mt-2 font-weight-bold">총 합계: <span id="sumValue">0.00</span> USDT</div>
+
+            <!-- 🔘 버튼들에 id 부여 (AJAX용) -->
+            <button id="save-btn" type="submit" class="btn btn-primary btn-block btn-sm">저장</button>
+            <button id="start-btn" type="button" class="btn btn-success btn-block btn-sm">시작</button>
+            <button id="stop-grid-btn" type="button" class="btn btn-warning btn-block btn-sm">그리드만 중단</button>
+            <button id="stop-repeat-btn" type="button" class="btn btn-warning btn-block btn-sm">반복 정지</button>
+            <button id="exit-stop-btn" type="button" class="btn btn-danger btn-block btn-sm">포지션 청산 후 정지</button>
+          </form>
+
+          <!-- 강제 갱신 (별도 폼이었으나 AJAX로 전환) -->
+          <div class="mt-2">
+            <button id="force-on-btn"  class="btn btn-info btn-block btn-sm">🔄 연속 강제 갱신</button>
+            <button id="force-off-btn" class="btn btn-secondary btn-block btn-sm">⏹️ 강제 갱신 해제</button>
+            <button id="force-once-btn" class="btn btn-warning btn-block btn-sm">🔁 한 번만 갱신</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="panel">
+          <h5>📊 실시간 차트</h5>
+          <div id="tradingview_chart" style="height: 800px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script type="text/javascript">
+      new TradingView.widget({
+        "container_id": "tradingview_chart",
+        "autosize": true,
+        "symbol": "{{ current_user.symbol.replace('/', '').replace(':USDT', '') }}",
+        "interval": "15",
+        "timezone": "Etc/UTC",
+        "theme": "dark",
+        "style": "1",
+        "locale": "kr",
+        "toolbar_bg": "#1e1e1e",
+        "enable_publishing": false,
+        "hide_top_toolbar": false,
+        "hide_legend": false,
+        "save_image": false,
+        "studies": [],
+        "show_popup_button": false,
+        "withdateranges": true,
+        "details": false,
+        "calendar": false
+      });
+    </script>
+
+    <!-- 이하 원래의 자산/포지션/내역/로그 섹션 그대로 유지 -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="panel">
+          <h5>💰 총 자산</h5>
+          <p>총 자산: {{ "{:.2f}".format(total_equity or 0) }} USDT  사용 가능: {{ "{:.2f}".format(free_usdt or 0) }} USDT</p>
+        </div>
+
+        <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+          <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#pane-position">포지션</a></li>
+          <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pane-orders">미체결 주문</a></li>
+          <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pane-history">체결 내역</a></li>
+          <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pane-bots">동작중인 봇</a></li>
+          <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pane-saved">임시저장 종목</a></li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <div id="pane-position" class="tab-pane fade show active">
+            <div class="panel">
+              <h5>📌 현재 진행 중 포지션</h5>
+              {% if current_position %}
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr>
+                    <th>심볼</th><th>방향</th><th>진입가</th><th>수량</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ current_position.symbol }}</td>
+                    <td>{{ current_position.side }}</td>
+                    <td>{{ current_position.entryPrice }}</td>
+                    <td>{{ current_position.contracts }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {% else %}
+              <p class="text-muted">진행 중인 포지션이 없습니다.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="pane-orders" class="tab-pane fade">
+            <div class="panel">
+              <h5>📝 미체결 주문</h5>
+              {% if open_orders %}
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr>
+                    <th>주문 ID</th><th>타입</th><th>가격</th><th>수량</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for o in open_orders %}
+                  <tr>
+                    <td>{{ o.id }}</td>
+                    <td>{{ o.side }} {{ o.type }} <small>{{ o.info.text }}</small></td>
+                    <td>{{ o.price }}</td>
+                    <td>{{ o.amount }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <p class="text-muted">미체결 주문이 없습니다.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="pane-history" class="tab-pane fade">
+            <div class="panel">
+              <h5>📈 체결 내역</h5>
+              {% if trades %}
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr>
+                    <th>시간</th><th>방향</th><th>가격</th><th>수량</th><th>손익(PnL)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for t in trades %}
+                  <tr>
+                    <td>{{ t.kst_time }}</td>
+                    <td>{{ t.side }}</td>
+                    <td>{{ t.price }}</td>
+                    <td>{{ t.amount }}</td>
+                    <td>{{ t.pnl }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <p class="text-muted">체결 내역이 없습니다.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="pane-bots" class="tab-pane fade">
+            <div class="panel">
+              <h5>🤖 동작중인 봇</h5>
+              {% if bots %}
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr>
+                    <th>심볼</th><th>방향</th><th>레버리지</th><th>익절</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for b in bots %}
+                  <tr>
+                    <td>{{ b.symbol }}</td>
+                    <td>{{ b.side }}</td>
+                    <td>{{ b.leverage }}x</td>
+                    <td>{{ b.take_profit }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <p class="text-muted">동작 중인 봇이 없습니다.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="pane-saved" class="tab-pane fade">
+            <div class="panel">
+              <h5>💾 임시저장 종목</h5>
+              {% if saved_configs %}
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr>
+                    <th>심볼</th><th>GAP</th><th>금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for config in saved_configs %}
+                  <tr>
+                    <td>{{ config.symbol }}</td>
+                    <td>{{ config.gap }}%</td>
+                    <td>{{ config.amount }} USDT</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <p class="text-muted">임시 저장된 종목이 없습니다.</p>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery & Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 토스트 자동 실행 -->
+  <script>
+    $(function(){ $('.toast').toast('show'); });
+  </script>
+
+  <!-- ✅ AJAX 유틸 + 버튼 핸들러 + 상태 폴링 -->
+  <script>
+    // 간단 토스트
+    function showToast(msg, type) {
+      const header = type === 'success' ? '✅ 성공'
+                    : type === 'danger' ? '❌ 오류'
+                    : type === 'warning' ? '⚠️ 경고'
+                    : 'ℹ️ 알림';
+      const $toast = $(`
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="2500" style="pointer-events:auto;">
+          <div class="toast-header">
+            <strong class="mr-auto">${header}</strong>
+            <small>지금</small>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast"><span>&times;</span></button>
+          </div>
+          <div class="toast-body">${msg}</div>
+        </div>`);
+      $('#toast-container').append($toast);
+      $toast.toast('show').on('hidden.bs.toast', function(){ $(this).remove(); });
+    }
+
+    // 공통 POST (form 데이터 직렬화 지원)
+    function postAjax(url, dataObj, onOK, onErr) {
+      $.ajax({
+        url: url,
+        method: 'POST',
+        data: dataObj || {},
+        dataType: 'json'
+      }).done(function(res){
+        onOK && onOK(res);
+      }).fail(function(xhr){
+        const msg = (xhr.responseJSON && (xhr.responseJSON.error || xhr.responseJSON.message)) || '요청 처리 중 오류';
+        onErr ? onErr(msg) : showToast(msg, 'danger');
+      });
+    }
+
+    // 상태 배지 업데이트
+    function setStatusBadge(text) {
+      const $b = $('#status-badge');
+      $b.text(text || '대기중');
+      // 텍스트에 따라 색상 힌트 (옵션)
+      const map = {
+        '실행중':'badge-success', '대기중':'badge-info',
+        '정지':'badge-secondary', '에러':'badge-danger'
+      };
+      $b.removeClass('badge-success badge-info badge-secondary badge-danger');
+      for (const k in map) {
+        if ((text||'').includes(k)) { $b.addClass(map[k]); return; }
+      }
+      $b.addClass('badge-info');
+    }
+
+    // /status_api 폴링
+    function pollStatus(){
+      $.getJSON('/status_api')
+       .done(function(res){
+          // 서버 구현에 따라 키가 status 또는 status_text일 수 있어 둘 다 처리
+          const s = res.status || res.status_text || res.state || '';
+          if (s) setStatusBadge(s);
+        });
+    }
+
+    // 버튼 enable/disable 편의
+    function busy($btn, isBusy){
+      $btn.prop('disabled', !!isBusy);
+      $btn.toggleClass('disabled', !!isBusy);
+    }
+
+    $(function(){
+      const $form = $('#settings-form');
+
+      // 저장(기본 submit) → AJAX로 변환
+      $('#save-btn').on('click', function(e){
+        e.preventDefault();
+        const $btn = $(this);
+        busy($btn, true);
+        const data = $form.serialize();
+        postAjax('{{ url_for("main.index") }}', data, function(res){
+          showToast('설정이 저장되었습니다.', 'success');
+          pollStatus(); // 저장 후 상태 갱신
+        }, function(msg){
+          showToast(msg, 'danger');
+        });
+        busy($btn, false);
+      });
+
+      // 시작
+      $('#start-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        const data = $form.serialize(); // 시작 시 설정값도 함께 전달하고 싶으면 직렬화
+        postAjax('{{ url_for("main.start_bot") }}', data, function(res){
+          const s = res.status || '봇 실행 중';
+          setStatusBadge(s);
+          showToast('봇을 시작했습니다.', 'success');
+        }, function(msg){ showToast(msg, 'danger'); });
+        busy($btn, false);
+      });
+
+      // 그리드만 중단
+      $('#stop-grid-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.stop_bot") }}', {}, function(res){
+          setStatusBadge(res.status || '그리드 중단');
+          showToast('그리드만 중단했습니다.', 'success');
+        });
+        busy($btn, false);
+      });
+
+      // 반복 정지
+      $('#stop-repeat-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.stop_repeat") }}', {}, function(res){
+          setStatusBadge(res.status || '반복 정지');
+          showToast('반복을 정지했습니다.', 'success');
+        });
+        busy($btn, false);
+      });
+
+      // 포지션 청산 후 정지
+      $('#exit-stop-btn').on('click', function(){
+        if (!confirm('정말 포지션을 청산하고 정지할까요?')) return;
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.exit_and_stop") }}', {}, function(res){
+          setStatusBadge(res.status || '청산 후 정지');
+          showToast('포지션을 청산하고 정지했습니다.', 'success');
+        });
+        busy($btn, false);
+      });
+
+      // 강제 갱신 on/off/once
+      $('#force-on-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.force_refresh") }}', {}, function(){
+          showToast('연속 강제 갱신 ON', 'success');
+        });
+        busy($btn, false);
+      });
+      $('#force-off-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.clear_force_refresh") }}', {}, function(){
+          showToast('강제 갱신 OFF', 'success');
+        });
+        busy($btn, false);
+      });
+      $('#force-once-btn').on('click', function(){
+        const $btn = $(this);
+        busy($btn, true);
+        postAjax('{{ url_for("main.single_refresh") }}', {}, function(){
+          showToast('한 번만 갱신 실행', 'success');
+        });
+        busy($btn, false);
+      });
+
+      // 3초마다 상태 폴링
+      pollStatus();
+      setInterval(pollStatus, 3000);
+    });
+  </script>
+
+  <!-- 그리드 렌더링 (기존과 동일) -->
+  <script>
+    function renderGrids() {
+      const c = document.getElementById('gridContainer');
+      if (!c) return;
+      let initial = [];
+      try {
+        initial = JSON.parse(c.dataset.initialGrids || '[]');
+      } catch (e) { console.warn('그리드 초기값 파싱 실패:', e); }
+      const roundsEl = document.getElementById('roundsInput');
+      const n = parseInt(roundsEl ? roundsEl.value : '0') || 0;
+      c.innerHTML = '';
+      let tot = 0;
+      for (let i = 0; i < n; i++) {
+        const a = initial[i]?.amount || '';
+        const g = initial[i]?.gap || '';
+        tot += parseFloat(a) || 0;
+        const row = document.createElement('div');
+        row.className = 'form-row mb-2';
+        row.innerHTML = `
+          <div class="col">
+            <input type="text" name="amount${i+1}" value="${a}"
+                   class="form-control form-control-sm"
+                   placeholder="${i+1}회차 금액(USDT)">
+          </div>
+          <div class="col">
+            <input type="text" name="gap${i+1}" value="${g}"
+                   class="form-control form-control-sm"
+                   placeholder="${i+1}회차 GAP(%)">
+          </div>`;
+        c.appendChild(row);
+      }
+      const sumEl = document.getElementById('sumValue');
+      if (sumEl) sumEl.textContent = tot.toFixed(2);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGrids();
+      const roundsEl = document.getElementById('roundsInput');
+      if (roundsEl) roundsEl.addEventListener('input', renderGrids);
+    });
+  </script>
+</body>
+</html>

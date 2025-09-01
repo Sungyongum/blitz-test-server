@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>프록시 관리</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #121212; color: #fff; }
+    .container { max-width: 95%; margin-top: 40px; }
+    .panel { background-color: #1e1e1e; padding: 20px; border-radius: 8px; }
+    .form-control-sm { color: #000; }
+    th, td { vertical-align: middle; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h3 class="mb-4">🛡️ 프록시 관리 페이지</h3>
+  <a href="/" class="btn btn-sm btn-secondary mb-3">← 대시보드로 돌아가기</a>
+
+  <div class="panel">
+    <h5 class="mb-3">프록시 목록</h5>
+    <table class="table table-dark table-bordered table-sm">
+      <thead>
+        <tr>
+          <th>ID</th><th>IP</th><th>Port</th><th>Username</th><th>Password</th><th>할당된 사용자</th><th>작업</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for proxy in proxies %}
+        <tr>
+          <td>{{ proxy.id }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('main.update_proxy', proxy_id=proxy.id) }}">
+              <input type="text" name="ip" value="{{ proxy.ip }}" class="form-control form-control-sm" required>
+          </td>
+          <td>
+              <input type="text" name="port" value="{{ proxy.port }}" class="form-control form-control-sm" required>
+          </td>
+          <td>
+              <input type="text" name="username" value="{{ proxy.username }}" class="form-control form-control-sm" required>
+          </td>
+          <td>
+              <input type="text" name="password" value="{{ proxy.password }}" class="form-control form-control-sm" required>
+          </td>
+          <td>{{ proxy.assigned_user_id or '미할당' }}</td>
+          <td class="d-grid gap-1">
+              <button type="submit" class="btn btn-sm btn-success mb-1">저장</button>
+            </form>
+
+            <form method="GET" action="{{ url_for('main.delete_proxy', proxy_id=proxy.id) }}">
+              <button type="submit" class="btn btn-sm btn-danger mb-1">삭제</button>
+            </form>
+
+            {% if proxy.assigned_user_id %}
+              {% set assigned_user = users_map.get(proxy.assigned_user_id) %}
+              {% if assigned_user and assigned_user.email != 'admin@admin.com' %}
+                <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=proxy.assigned_user_id) }}">
+                  <button type="submit" class="btn btn-sm btn-warning">할당 해제</button>
+                </form>
+              {% else %}
+                <button class="btn btn-sm btn-secondary" disabled>관리자 제외</button>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h5 class="mt-4">새 프록시 등록</h5>
+    <form method="POST" action="{{ url_for('main.add_proxy') }}" class="row g-2">
+      <div class="col"><input name="ip" placeholder="IP" class="form-control form-control-sm" required></div>
+      <div class="col"><input name="port" placeholder="Port" class="form-control form-control-sm" required></div>
+      <div class="col"><input name="username" placeholder="Username" class="form-control form-control-sm" required></div>
+      <div class="col"><input name="password" placeholder="Password" class="form-control form-control-sm" required></div>
+      <div class="col-auto"><button type="submit" class="btn btn-primary btn-sm">추가</button></div>
+    </form>
+
+  </div>
+</div>
+</body>
+</html>

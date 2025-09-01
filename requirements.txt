@@ -1,0 +1,10 @@
+flask
+flask_sqlalchemy
+flask_login
+flask_admin
+flask_migrate
+ccxt>=4.0.0
+requests
+email-validator
+flask-admin
+pysocks

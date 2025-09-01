@@ -1,0 +1,1304 @@
+{
+  "trades": [
+    {
+      "user_id": 2,
+      "timestamp": 1752953849,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3562.14,
+      "exit_price": 3566.13,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752954206,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3566.63,
+      "exit_price": 3577.33,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752955671,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3578.64,
+      "exit_price": 3589.38,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752963063,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3592.21,
+      "exit_price": 3582.0,
+      "size": 18.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752968125,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3580.33,
+      "exit_price": 3591.07,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752971052,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3592.61,
+      "exit_price": 3596.63,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752973597,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3594.64,
+      "exit_price": 3598.66,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752973753,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3599.67,
+      "exit_price": 3610.47,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752974434,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3614.71,
+      "exit_price": 3618.76,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752979007,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3615.58,
+      "exit_price": 3619.63,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752981954,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3622.35,
+      "exit_price": 3626.41,
+      "size": 8.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752982009,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3626.91,
+      "exit_price": 3637.79,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752982286,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3640.92,
+      "exit_price": 3651.84,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1752982533,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3657.69,
+      "exit_price": 3668.66,
+      "size": 3.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753025132,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.031628,
+      "exit_price": 0.031615,
+      "size": 3310.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753025154,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.031627,
+      "exit_price": 0.031616,
+      "size": 3310.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753025176,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.031635,
+      "exit_price": 0.031615,
+      "size": 3320.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753025199,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.03163183,
+      "exit_price": 0.031629,
+      "size": 3310.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753026990,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.03190465,
+      "exit_price": 0.031905,
+      "size": 3290.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753027011,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.03191183,
+      "exit_price": 0.031919,
+      "size": 6580.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753027339,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.03193577,
+      "exit_price": 0.031936,
+      "size": 3290.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753027360,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.03193088,
+      "exit_price": 0.031926,
+      "size": 6580.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753027382,
+      "symbol": "ETHBTC/USDT:USDT",
+      "side": "long",
+      "entry_price": 0.0319276,
+      "exit_price": 0.031921,
+      "size": 9860.0,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753032400,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3785.39,
+      "exit_price": 3776.5,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753035876,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3777.15,
+      "exit_price": 3743.23,
+      "size": 0.16,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753035969,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3753.1175,
+      "exit_price": 3743.23,
+      "size": 0.16,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753035995,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3753.1175,
+      "exit_price": 3743.23,
+      "size": 0.16,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036072,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3753.1175,
+      "exit_price": 3743.23,
+      "size": 0.16,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036149,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3753.49111111,
+      "exit_price": 3756.48,
+      "size": 0.18,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036342,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3753.03272727,
+      "exit_price": 3750.49,
+      "size": 0.22,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036618,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3752.31833333,
+      "exit_price": 3744.46,
+      "size": 0.24,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036729,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3752.31833333,
+      "exit_price": 3744.46,
+      "size": 0.24,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753036921,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3751.39,
+      "exit_price": 3746.6,
+      "size": 0.28,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753038941,
+      "symbol": "ETH/USDC:USDC-251226",
+      "side": "long",
+      "entry_price": 3877.2,
+      "exit_price": 3888.8,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753044568,
+      "symbol": "ETH/USDC:USDC-251226",
+      "side": "long",
+      "entry_price": 3890.15,
+      "exit_price": 3877.7,
+      "size": 0.15,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753070499,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3752.14,
+      "exit_price": 3763.4,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753071645,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3756.62,
+      "exit_price": 3767.89,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753077100,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3776.05,
+      "exit_price": 3779.8,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753078708,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3780.64,
+      "exit_price": 3791.98,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753079036,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3792.58,
+      "exit_price": 3803.96,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753086637,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3804.76,
+      "exit_price": 3808.54,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753094621,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3810.92,
+      "exit_price": 3798.7,
+      "size": 0.15,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753094847,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3797.41,
+      "exit_price": 3808.8,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753097070,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3819.8,
+      "exit_price": 3823.6,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753097599,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3825.56,
+      "exit_price": 3837.04,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753102163,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3835.41,
+      "exit_price": 3823.11,
+      "size": 0.15,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753105214,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3824.18,
+      "exit_price": 3811.91,
+      "size": 0.15,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753105974,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3812.12,
+      "exit_price": 3812.12,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753107381,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3823.61,
+      "exit_price": 3827.41,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753108498,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3838.9,
+      "exit_price": 3850.42,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753109800,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3844.89,
+      "exit_price": 3846.17,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753110771,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3844.8,
+      "exit_price": 3848.62,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753110782,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3846.01,
+      "exit_price": 3849.83,
+      "size": 0.09,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753148214,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3849.08,
+      "exit_price": 3757.29,
+      "size": 0.73,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753148408,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3848.81,
+      "exit_price": 3758.39,
+      "size": 0.97,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753148441,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3755.16,
+      "exit_price": 3766.43,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753148443,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3761.01,
+      "exit_price": 3772.29,
+      "size": 0.03,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753148831,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3772.51,
+      "exit_price": 3776.26,
+      "size": 0.09,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753148832,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3772.51,
+      "exit_price": 3776.26,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753149169,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3776.22,
+      "exit_price": 3787.55,
+      "size": 0.03,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753149173,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3776.58,
+      "exit_price": 3787.91,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753149255,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3788.51,
+      "exit_price": 3799.88,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753165264,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3798.04,
+      "exit_price": 3651.76,
+      "size": 0.75,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753169293,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3709.8,
+      "exit_price": 3713.49,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753180222,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3714.53,
+      "exit_price": 3676.04,
+      "size": 0.36,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753181537,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3678.74,
+      "exit_price": 3689.78,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753182510,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3689.51,
+      "exit_price": 3700.58,
+      "size": 0.02,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753182513,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3790.0,
+      "exit_price": 3700.49,
+      "size": 0.98,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753184825,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3701.79,
+      "exit_price": 3705.47,
+      "size": 0.06,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753184828,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3703.67,
+      "exit_price": 3707.35,
+      "size": 0.09,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753191790,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3712.21,
+      "exit_price": 3700.53,
+      "size": 0.22,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753191794,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3712.75,
+      "exit_price": 3700.19,
+      "size": 0.16,
+      "pnl": null
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1753193652,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3703.21,
+      "exit_price": 3665.88,
+      "size": 0.48,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1753193655,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3704.04,
+      "exit_price": 3665.65,
+      "size": 0.36,
+      "pnl": null
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754514344,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3669.22666667,
+      "exit_price": 3680.23,
+      "size": 0.03,
+      "pnl": 0.3300999998999941
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754518184,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3667.94,
+      "exit_price": 3678.94,
+      "size": 0.03,
+      "pnl": 0.32999999999999996
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754524284,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3673.59,
+      "exit_price": 3684.61,
+      "size": 0.03,
+      "pnl": 0.33059999999999945
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754529735,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3670.62,
+      "exit_price": 3681.63,
+      "size": 0.03,
+      "pnl": 0.33030000000000653
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754529960,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3675.96333333,
+      "exit_price": 3686.99,
+      "size": 0.03,
+      "pnl": 0.3308000000999982
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754529986,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3680.65,
+      "exit_price": 3691.69,
+      "size": 0.01,
+      "pnl": 0.11039999999999964
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754530074,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3692.01,
+      "exit_price": 3703.09,
+      "size": 0.01,
+      "pnl": 0.11079999999999927
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754530080,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3691.46,
+      "exit_price": 3702.53,
+      "size": 0.01,
+      "pnl": 0.11070000000000164
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754546929,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3683.35,
+      "exit_price": 3694.4,
+      "size": 0.07,
+      "pnl": 0.7735000000000128
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754546939,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3685.32428571,
+      "exit_price": 3696.38,
+      "size": 0.07,
+      "pnl": 0.7739000003000138
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754549165,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3689.02666667,
+      "exit_price": 3700.09,
+      "size": 0.03,
+      "pnl": 0.3318999999000061
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754549256,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3695.76,
+      "exit_price": 3706.85,
+      "size": 0.01,
+      "pnl": 0.1108999999999969
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754549296,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3696.16,
+      "exit_price": 3707.25,
+      "size": 0.01,
+      "pnl": 0.11090000000000146
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754551206,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3696.40333333,
+      "exit_price": 3707.49,
+      "size": 0.03,
+      "pnl": 0.3326000000999966
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754553735,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3697.37333333,
+      "exit_price": 3708.47,
+      "size": 0.03,
+      "pnl": 0.3329000000999895
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754553749,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3700.99,
+      "exit_price": 3712.09,
+      "size": 0.03,
+      "pnl": 0.3330000000000109
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754555250,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3713.61,
+      "exit_price": 3724.75,
+      "size": 0.01,
+      "pnl": 0.11139999999999872
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754559843,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3717.41333333,
+      "exit_price": 3728.57,
+      "size": 0.03,
+      "pnl": 0.33470000010000145
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754560661,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3718.29,
+      "exit_price": 3729.44,
+      "size": 0.01,
+      "pnl": 0.11150000000000092
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754560984,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3725.87,
+      "exit_price": 3737.05,
+      "size": 0.01,
+      "pnl": 0.11180000000000291
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754560993,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3732.0,
+      "exit_price": 3743.2,
+      "size": 0.01,
+      "pnl": 0.11199999999999818
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754561031,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3740.53,
+      "exit_price": 3751.75,
+      "size": 0.01,
+      "pnl": 0.112199999999998
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754561032,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3742.98,
+      "exit_price": 3754.21,
+      "size": 0.01,
+      "pnl": 0.11230000000000018
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754561584,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3765.07,
+      "exit_price": 3776.37,
+      "size": 0.01,
+      "pnl": 0.11299999999999727
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754561586,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3765.83,
+      "exit_price": 3777.13,
+      "size": 0.01,
+      "pnl": 0.11300000000000182
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754561652,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3778.81,
+      "exit_price": 3790.15,
+      "size": 0.01,
+      "pnl": 0.11340000000000146
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754561655,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3780.0,
+      "exit_price": 3791.34,
+      "size": 0.01,
+      "pnl": 0.11340000000000146
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754562625,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3789.89,
+      "exit_price": 3801.26,
+      "size": 0.03,
+      "pnl": 0.34110000000001034
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754562634,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3789.21666667,
+      "exit_price": 3800.58,
+      "size": 0.03,
+      "pnl": 0.340899999899998
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754563211,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3805.35,
+      "exit_price": 3816.77,
+      "size": 0.01,
+      "pnl": 0.11420000000000073
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754563215,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3802.99,
+      "exit_price": 3814.4,
+      "size": 0.03,
+      "pnl": 0.34230000000000926
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754564202,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3810.53,
+      "exit_price": 3821.96,
+      "size": 0.03,
+      "pnl": 0.3428999999999951
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754565962,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3809.62666667,
+      "exit_price": 3821.06,
+      "size": 0.03,
+      "pnl": 0.34299999990000285
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754567043,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3814.03,
+      "exit_price": 3825.47,
+      "size": 0.03,
+      "pnl": 0.34319999999998796
+    },
+    {
+      "user_id": 2,
+      "timestamp": 1754567044,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3821.03,
+      "exit_price": 3832.49,
+      "size": 0.01,
+      "pnl": 0.11459999999999582
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754568989,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 3831.88,
+      "exit_price": 3843.38,
+      "size": 0.01,
+      "pnl": 0.115
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754759050,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4200.2,
+      "exit_price": 4202.31,
+      "size": 0.02,
+      "pnl": 0.042200000000011645
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754759240,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4201.39,
+      "exit_price": 4213.99,
+      "size": 0.02,
+      "pnl": 0.25199999999998907
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754760963,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4213.48,
+      "exit_price": 4226.12,
+      "size": 0.02,
+      "pnl": 0.2528000000000066
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754764680,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4228.67,
+      "exit_price": 4241.36,
+      "size": 0.02,
+      "pnl": 0.253799999999992
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754765529,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4232.42,
+      "exit_price": 4245.12,
+      "size": 0.02,
+      "pnl": 0.25399999999999634
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754768547,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4248.58,
+      "exit_price": 4261.33,
+      "size": 0.02,
+      "pnl": 0.255
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754770175,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4261.7,
+      "exit_price": 4274.49,
+      "size": 0.02,
+      "pnl": 0.25579999999999925
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754770244,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4273.68,
+      "exit_price": 4286.5,
+      "size": 0.02,
+      "pnl": 0.2563999999999942
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754773218,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4279.08,
+      "exit_price": 4291.92,
+      "size": 0.05,
+      "pnl": 0.6420000000000073
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754776079,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4271.25,
+      "exit_price": 4284.06,
+      "size": 0.12,
+      "pnl": 1.5372000000000479
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754777120,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4279.66,
+      "exit_price": 4292.5,
+      "size": 0.05,
+      "pnl": 0.6420000000000073
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754778202,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4293.02,
+      "exit_price": 4305.9,
+      "size": 0.02,
+      "pnl": 0.257599999999984
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754778240,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4305.88,
+      "exit_price": 4318.8,
+      "size": 0.02,
+      "pnl": 0.25840000000000146
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754786939,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4281.16,
+      "exit_price": 4294.0,
+      "size": 0.46,
+      "pnl": 5.906400000000067
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754787194,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4295.57,
+      "exit_price": 4308.46,
+      "size": 0.02,
+      "pnl": 0.2578000000000066
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754787305,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4318.44,
+      "exit_price": 4331.4,
+      "size": 0.02,
+      "pnl": 0.2592000000000007
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1754789982,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4303.84,
+      "exit_price": 4316.75,
+      "size": 0.12,
+      "pnl": 1.5491999999999826
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1755194395,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4535.92,
+      "exit_price": 4627.27,
+      "size": 0.04,
+      "pnl": 3.6540000000000146
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1755195921,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4499.64,
+      "exit_price": 4627.27,
+      "size": 0.05,
+      "pnl": 6.381500000000006
+    },
+    {
+      "user_id": 3,
+      "timestamp": 1755196037,
+      "symbol": "ETH/USDT:USDT",
+      "side": "long",
+      "entry_price": 4517.16,
+      "exit_price": 4627.27,
+      "size": 0.02,
+      "pnl": 2.2022000000000115
+    }
+  ]
+}

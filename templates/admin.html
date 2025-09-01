@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>통합 관리자 페이지</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #121212; color: #fff; }
+    .container { max-width: 95%; margin-top: 40px; }
+    .panel { background-color: #1e1e1e; padding: 20px; border-radius: 8px; }
+    table { color: #fff; font-size: 14px; }
+    th, td { vertical-align: middle; }
+    .form-check-input { margin-top: 6px; }
+    .badge-success { background-color: #28a745 !important; }
+    .badge-secondary { background-color: #6c757d !important; }
+    .btn-sm { margin-bottom: 3px; }
+    .proxy-success { color: #28a745; font-weight: bold; }
+    .proxy-fail { color: #dc3545; font-weight: bold; }
+    .proxy-unknown { color: #ffc107; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h3 class="mb-4">👑 Blitz Trade Bot 관리자</h3>
+
+  <!-- 상단 네비 -->
+  <div class="mb-3 d-flex gap-2">
+    <a href="/" class="btn btn-sm btn-secondary">← 대시보드로 돌아가기</a>
+    <a href="{{ url_for('main.admin_pnl_summary') }}" class="btn btn-sm btn-outline-info" target="_blank">관리자 손익 대시보드</a>
+  </div>
+
+  <div class="panel">
+    <h5 class="mb-3">등록된 사용자 목록</h5>
+    <table class="table table-dark table-bordered table-sm">
+      <thead>
+        <tr>
+          <th>Email</th><th>거래소</th><th>UID</th><th>텔레그램</th><th>API Key</th><th>프록시</th>
+          <th>심볼</th><th>방향</th><th>TP</th><th>SL</th><th>반복</th>
+          <th>레버리지</th><th>회차</th><th>누적 PnL</th><th>상태</th>
+          <th>레퍼럴 예외</th><th>저장/제어</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr data-user-id="{{ u.id }}">
+          <form method="POST" action="{{ url_for('main.admin_update_user', user_id=u.id) }}">
+            <td>
+              <a href="{{ url_for('main.admin_user_detail', user_id=u.id) }}">
+                {{ u.email }}
+              </a>
+            </td>
+            <td>
+              <select name="exchange" class="form-control form-control-sm">
+                <option value="bybit" {% if u.exchange == 'bybit' %}selected{% endif %}>Bybit</option>
+                <option value="bingx" {% if u.exchange == 'bingx' %}selected{% endif %}>BingX</option>
+              </select>
+            </td>
+            <td><input type="text" name="uid" value="{{ u.uid }}" class="form-control form-control-sm"></td>
+            <td>
+              <input type="text" name="telegram_token" value="{{ u.telegram_token }}" class="form-control form-control-sm mb-1" placeholder="Token">
+              <input type="text" name="telegram_chat_id" value="{{ u.telegram_chat_id }}" class="form-control form-control-sm" placeholder="Chat ID">
+            </td>
+            <td>
+              {% if current_user.email == 'admin@admin.com' %}
+              <input type="text" name="api_key" value="{{ u.api_key }}" class="form-control form-control-sm mb-1" placeholder="Key">
+              <input type="text" name="api_secret" value="{{ u.api_secret }}" class="form-control form-control-sm" placeholder="Secret">
+              {% else %}
+                ****<br>****
+              {% endif %}
+            </td>
+            <td>
+              {% if proxies.get(u.id) %}
+                {{ proxies[u.id].ip }}:{{ proxies[u.id].port }}<br>
+                <small>{{ proxies[u.id].username }}</small><br>
+              {% else %}
+                <span class="text-warning">할당 안됨</span><br>
+              {% endif %}
+              {% if proxy_statuses.get(u.id) == 'success' %}
+                <span class="proxy-success">✅ 연결 성공</span>
+              {% elif proxy_statuses.get(u.id) == 'fail' %}
+                <span class="proxy-fail">❌ 연결 실패</span>
+              {% else %}
+                <span class="proxy-unknown">❓ 알 수 없음</span>
+              {% endif %}
+            </td>
+            <td>
+              <select name="symbol" class="form-control form-control-sm">
+                {% for s in ['BTC/USDT','ETH/USDT','XRP/USDT'] %}
+                  <option value="{{ s }}" {% if u.symbol == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <select name="side" class="form-control form-control-sm">
+                <option value="long" {% if u.side == 'long' %}selected{% endif %}>Long</option>
+                <option value="short" {% if u.side == 'short' %}selected{% endif %}>Short</option>
+              </select>
+            </td>
+            <td><input type="text" name="take_profit" value="{{ u.take_profit|replace('%','') }}" class="form-control form-control-sm"></td>
+            <td><input type="text" name="stop_loss" value="{{ u.stop_loss|replace('%','') }}" class="form-control form-control-sm"></td>
+            <td class="text-center">
+              <input type="checkbox" name="repeat" class="form-check-input" {% if u.repeat %}checked{% endif %}>
+            </td>
+            <td><input type="number" name="leverage" value="{{ u.leverage }}" class="form-control form-control-sm"></td>
+            <td><input type="number" name="rounds" value="{{ u.rounds }}" class="form-control form-control-sm"></td>
+            <td class="pnl-cell">{{ pnl_by_user.get(u.id, 0) | round(2) }} USDT</td>
+            <td class="status-cell">
+              <span class="badge {% if user_statuses.get(u.id) == '진행 중' %}badge-success{% else %}badge-secondary{% endif %}">
+                {{ user_statuses.get(u.id, '중지됨') }}
+              </span>
+            </td>
+            <td class="text-center">
+              <input type="checkbox" name="skip_uid_check" class="form-check-input" {% if u.skip_uid_check %}checked{% endif %}>
+            </td>
+            <td>
+              <button type="submit" class="btn btn-success btn-sm">저장</button><br>
+              <a href="{{ url_for('main.reassign_proxy', user_id=u.id) }}" class="btn btn-warning btn-sm">프록시 재할당</a><br>
+              <a href="{{ url_for('main.admin_force_stop', user_id=u.id) }}" class="btn btn-danger btn-sm">강제 종료</a><br>
+              <a href="{{ url_for('main.admin_force_reset', user_id=u.id) }}" class="btn btn-info btn-sm">강제 리셋</a><br>
+
+              <!-- 각 사용자 손익 보기 버튼 -->
+              <a href="{{ url_for('main.admin_pnl_summary', user_id=u.id) }}"
+                 class="btn btn-outline-success btn-sm" target="_blank">손익 보기</a>
+
+              {% if proxies.get(u.id) and u.email != 'admin@admin.com' %}
+              <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=u.id) }}" style="margin-top: 4px;" onsubmit="return confirm('정말로 프록시를 해제하시겠습니까?');">
+                <button type="submit" class="btn btn-outline-light btn-sm">프록시 해제</button>
+              </form>
+              {% elif proxies.get(u.id) and u.email == 'admin@admin.com' %}
+                <button class="btn btn-outline-light btn-sm" disabled>해제 불가</button>
+              {% endif %}
+            </td>
+          </form>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>통합 관리자 페이지</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #121212; color: #fff; }
+    .container { max-width: 95%; margin-top: 40px; }
+    .panel { background-color: #1e1e1e; padding: 20px; border-radius: 8px; }
+    table { color: #fff; font-size: 14px; }
+    th, td { vertical-align: middle; }
+    .form-check-input { margin-top: 6px; }
+    .badge-success { background-color: #28a745 !important; }
+    .badge-secondary { background-color: #6c757d !important; }
+    .btn-sm { margin-bottom: 3px; }
+    .proxy-success { color: #28a745; font-weight: bold; }
+    .proxy-fail { color: #dc3545; font-weight: bold; }
+    .proxy-unknown { color: #ffc107; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h3 class="mb-4">👑 Blitz Trade Bot 관리자</h3>
+
+  <!-- 상단 네비 -->
+  <div class="mb-3 d-flex gap-2">
+    <a href="/" class="btn btn-sm btn-secondary">← 대시보드로 돌아가기</a>
+    <a href="{{ url_for('main.admin_pnl_summary') }}" class="btn btn-sm btn-outline-info" target="_blank">관리자 손익 대시보드</a>
+  </div>
+
+  <div class="panel">
+    <h5 class="mb-3">등록된 사용자 목록</h5>
+    <table class="table table-dark table-bordered table-sm">
+      <thead>
+        <tr>
+          <th>Email</th><th>거래소</th><th>UID</th><th>텔레그램</th><th>API Key</th><th>프록시</th>
+          <th>심볼</th><th>방향</th><th>TP</th><th>SL</th><th>반복</th>
+          <th>레버리지</th><th>회차</th><th>누적 PnL</th><th>상태</th>
+          <th>레퍼럴 예외</th><th>저장/제어</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <form method="POST" action="{{ url_for('main.admin_update_user', user_id=u.id) }}">
+            <td>{{ u.email }}</td>
+            <td>
+              <select name="exchange" class="form-control form-control-sm">
+                <option value="bybit" {% if u.exchange == 'bybit' %}selected{% endif %}>Bybit</option>
+                <option value="bingx" {% if u.exchange == 'bingx' %}selected{% endif %}>BingX</option>
+              </select>
+            </td>
+            <td><input type="text" name="uid" value="{{ u.uid }}" class="form-control form-control-sm"></td>
+            <td>
+              <input type="text" name="telegram_token" value="{{ u.telegram_token }}" class="form-control form-control-sm mb-1" placeholder="Token">
+              <input type="text" name="telegram_chat_id" value="{{ u.telegram_chat_id }}" class="form-control form-control-sm" placeholder="Chat ID">
+            </td>
+            <td>
+              {% if current_user.email == 'admin@admin.com' %}
+              <input type="text" name="api_key" value="{{ u.api_key }}" class="form-control form-control-sm mb-1" placeholder="Key">
+              <input type="text" name="api_secret" value="{{ u.api_secret }}" class="form-control form-control-sm" placeholder="Secret">
+              {% else %}
+                ****<br>****
+              {% endif %}
+            </td>
+            <td>
+              {% if proxies.get(u.id) %}
+                {{ proxies[u.id].ip }}:{{ proxies[u.id].port }}<br>
+                <small>{{ proxies[u.id].username }}</small><br>
+              {% else %}
+                <span class="text-warning">할당 안됨</span><br>
+              {% endif %}
+              {% if proxy_statuses.get(u.id) == 'success' %}
+                <span class="proxy-success">✅ 연결 성공</span>
+              {% elif proxy_statuses.get(u.id) == 'fail' %}
+                <span class="proxy-fail">❌ 연결 실패</span>
+              {% else %}
+                <span class="proxy-unknown">❓ 알 수 없음</span>
+              {% endif %}
+            </td>
+            <td>
+              <select name="symbol" class="form-control form-control-sm">
+                {% for s in ['BTC/USDT','ETH/USDT','XRP/USDT'] %}
+                  <option value="{{ s }}" {% if u.symbol == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <select name="side" class="form-control form-control-sm">
+                <option value="long" {% if u.side == 'long' %}selected{% endif %}>Long</option>
+                <option value="short" {% if u.side == 'short' %}selected{% endif %}>Short</option>
+              </select>
+            </td>
+            <td><input type="text" name="take_profit" value="{{ u.take_profit|replace('%','') }}" class="form-control form-control-sm"></td>
+            <td><input type="text" name="stop_loss" value="{{ u.stop_loss|replace('%','') }}" class="form-control form-control-sm"></td>
+            <td class="text-center">
+              <input type="checkbox" name="repeat" class="form-check-input" {% if u.repeat %}checked{% endif %}>
+            </td>
+            <td><input type="number" name="leverage" value="{{ u.leverage }}" class="form-control form-control-sm"></td>
+            <td><input type="number" name="rounds" value="{{ u.rounds }}" class="form-control form-control-sm"></td>
+            <td>{{ pnl_by_user.get(u.id, 0) | round(2) }} USDT</td>
+            <td>
+              <span class="badge {% if user_statuses.get(u.id) == '진행 중' %}badge-success{% else %}badge-secondary{% endif %}">
+                {{ user_statuses.get(u.id, '중지됨') }}
+              </span>
+            </td>
+            <td class="text-center">
+              <input type="checkbox" name="skip_uid_check" class="form-check-input" {% if u.skip_uid_check %}checked{% endif %}>
+            </td>
+            <td>
+              <button type="submit" class="btn btn-success btn-sm">저장</button><br>
+              <a href="{{ url_for('main.reassign_proxy', user_id=u.id) }}" class="btn btn-warning btn-sm">프록시 재할당</a><br>
+              <a href="{{ url_for('main.admin_force_stop', user_id=u.id) }}" class="btn btn-danger btn-sm">강제 종료</a><br>
+              <a href="{{ url_for('main.admin_force_reset', user_id=u.id) }}" class="btn btn-info btn-sm">강제 리셋</a><br>
+
+              <!-- 각 사용자 손익 보기 버튼 -->
+              <a href="{{ url_for('main.admin_pnl_summary', user_id=u.id) }}"
+                 class="btn btn-outline-success btn-sm" target="_blank">손익 보기</a>
+
+              {% if proxies.get(u.id) and u.email != 'admin@admin.com' %}
+              <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=u.id) }}" style="margin-top: 4px;" onsubmit="return confirm('정말로 프록시를 해제하시겠습니까?');">
+                <button type="submit" class="btn btn-outline-light btn-sm">프록시 해제</button>
+              </form>
+              {% elif proxies.get(u.id) and u.email == 'admin@admin.com' %}
+                <button class="btn btn-outline-light btn-sm" disabled>해제 불가</button>
+              {% endif %}
+            </td>
+          </form>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function refreshUserStatus() {
+  $.getJSON('/admin_status_api', function(data) {
+    data.users.forEach(function(user) {
+      // 상태 갱신
+      let statusCell = $('tr[data-user-id="' + user.id + '"] .status-cell');
+      if (user.status === '진행 중') {
+        statusCell.html('<span class="badge badge-success">진행 중</span>');
+      } else {
+        statusCell.html('<span class="badge badge-secondary">중지됨</span>');
+      }
+
+      // PnL 갱신
+      $('tr[data-user-id="' + user.id + '"] .pnl-cell')
+        .text(user.pnl.toFixed(2) + ' USDT');
+    });
+  });
+}
+
+// 5초마다 자동 갱신
+setInterval(refreshUserStatus, 5000);
+</script>
+</body>
+</html>
+
+</body>
+</html>

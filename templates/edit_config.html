@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+  <title>✏️ 설정 수정</title>
+  <link
+    rel="stylesheet"
+    href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+  />
+  <style>
+    body { background: #121212; color: #f1f1f1; }
+    .panel { background: #1e1e1e; padding: 1.5rem; border-radius: .5rem; margin-top:2rem; }
+    label { font-weight: 500; font-size: .9rem; }
+    .btn-block + .btn-block { margin-top: .5rem; }
+    hr { border-color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="panel mx-auto" style="max-width:600px;">
+      <h5 class="mb-4">✏️ 포지션 설정 수정 (ID {{ cfg.id }})</h5>
+      <form action="{{ url_for('main.edit_config', config_id=cfg.id) }}" method="post">
+        <div class="form-row">
+          <div class="form-group col">
+            <label>심볼</label>
+            <select name="symbol" class="form-control form-control-sm">
+              {% for s in ['BTC/USDT','ETH/USDT','XRP/USDT'] %}
+                <option value="{{ s }}" {% if cfg.symbol==s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group col">
+            <label>방향</label>
+            <select name="side" class="form-control form-control-sm">
+              <option value="long"  {% if cfg.side=='long'  %}selected{% endif %}>Long</option>
+              <option value="short" {% if cfg.side=='short' %}selected{% endif %}>Short</option>
+            </select>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="form-group">
+          <label>레버리지</label>
+          <select name="leverage" class="form-control form-control-sm">
+            {% for lv in [1,2,3,5,10,15,20,25,50] %}
+              <option value="{{ lv }}" {% if cfg.leverage==lv %}selected{% endif %}>{{ lv }}배</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label>익절 (%)</label>
+            <input type="number" name="take_profit" class="form-control form-control-sm"
+                   step="0.1" min="0.1"
+                   value="{{ cfg.take_profit|replace('%','') }}" required>
+          </div>
+          <div class="form-group col">
+            <label>손절 (%)</label>
+            <input type="number" name="stop_loss" class="form-control form-control-sm"
+                   step="0.1" min="0"
+                   value="{{ cfg.stop_loss|replace('%','') }}">
+          </div>
+        </div>
+
+        <div class="form-group form-check">
+          <input type="checkbox" class="form-check-input" id="repeatCheck" name="repeat"
+                 {% if cfg.repeat %}checked{% endif %}>
+          <label class="form-check-label" for="repeatCheck">반복 실행</label>
+        </div>
+
+        <div class="form-group">
+          <label for="roundsInput">그리드 회차 수</label>
+          <input type="number" id="roundsInput" name="rounds" class="form-control form-control-sm"
+                 value="{{ cfg.rounds }}" min="1">
+        </div>
+
+        <div id="gridContainer" data-initial-grids='{{ cfg.grids|tojson }}'></div>
+        <div class="mt-2 font-weight-bold">총 합계: <span id="sumValue">0.00</span> USDT</div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-sm mt-3">업데이트</button>
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-block btn-sm">취소</a>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    function renderGrids() {
+      const c = document.getElementById('gridContainer');
+      const initial = JSON.parse(c.dataset.initialGrids || '[]');
+      const n = parseInt(document.getElementById('roundsInput').value) || 0;
+      c.innerHTML = '';
+      let tot = 0;
+      for (let i = 0; i < n; i++) {
+        const a = initial[i]?.amount || '';
+        const g = initial[i]?.gap    || '';
+        tot += parseFloat(a) || 0;
+        const row = document.createElement('div');
+        row.className = 'form-row mb-2';
+        row.innerHTML = `
+          <div class="col">
+            <input type="text" name="amount${i+1}" value="${a}"
+                   class="form-control form-control-sm"
+                   placeholder="${i+1}회차 금액(USDT)">
+          </div>
+          <div class="col">
+            <input type="text" name="gap${i+1}"    value="${g}"
+                   class="form-control form-control-sm"
+                   placeholder="${i+1}회차 GAP(%)">
+          </div>`;
+        c.appendChild(row);
+      }
+      document.getElementById('sumValue').textContent = tot.toFixed(2);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGrids();
+      document.getElementById('roundsInput')
+              .addEventListener('input', renderGrids);
+    });
+  </script>
+</body>
+</html>
