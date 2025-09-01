@@ -426,8 +426,7 @@ def admin_lite():
 @main.route('/start', methods=['GET', 'POST'])
 @login_required
 def start_bot():
-    """
-    Legacy start route - redirects to use SimpleBotManager API for consistency.
+    Legacy start route - uses the SimpleBotManager API internally for consistency.
     This prevents dual bot management systems from conflicting.
     """
     # Use SimpleBotManager instead of legacy thread spawning
