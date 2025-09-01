@@ -46,6 +46,7 @@ class SimpleBotManager:
             # Check for duplicate start
             if user_id in self.managed_bots:
                 bot_info = self.managed_bots[user_id]
+                # Always check if thread is still alive first
                 if bot_info['thread'].is_alive():
                     return {
                         "success": False,
@@ -53,7 +54,8 @@ class SimpleBotManager:
                         "status": "already_running"
                     }
                 else:
-                    # Clean up dead thread
+                    # Clean up dead thread before proceeding
+                    logger.info(f"Cleaning up dead thread for user {user_id}")
                     self._cleanup_bot(user_id)
             
             # Load user credentials from DB
