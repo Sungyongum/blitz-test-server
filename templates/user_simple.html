@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Blitz LITE Bot Control{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2>🤖 Blitz LITE Bot Control</h2>
+        <p class="text-muted">User: {{ user.email }} | Symbol: {{ user.symbol }} | Side: {{ user.side }}</p>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button id="btn-start" class="btn btn-success btn-lg btn-block mb-3">
+                            🚀 Start Bot
+                        </button>
+                        <button id="btn-stop" class="btn btn-danger btn-lg btn-block mb-3">
+                            🛑 Stop Bot
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button id="btn-status" class="btn btn-info btn-lg btn-block mb-3">
+                            📊 Get Status
+                        </button>
+                        <button id="btn-recover" class="btn btn-warning btn-lg btn-block mb-3">
+                            🔄 Recover Orders
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="bot-status" class="mt-4">
+                    <h5>Bot Status</h5>
+                    <div id="status-content" class="border p-3 bg-light">
+                        <p class="text-muted">Click "Get Status" to check bot status.</p>
+                    </div>
+                </div>
+                
+                <div id="alerts" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// CSRF token for Flask-WTF (if used)
+const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+
+function showAlert(message, type = 'info') {
+    const alertsDiv = document.getElementById('alerts');
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    `;
+    alertsDiv.innerHTML = alertHTML;
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        const alert = alertsDiv.querySelector('.alert');
+        if (alert) alert.remove();
+    }, 5000);
+}
+
+function updateStatus(data) {
+    const statusContent = document.getElementById('status-content');
+    if (data.error) {
+        statusContent.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+        return;
+    }
+    
+    const running = data.running ? '🟢 Running' : '🔴 Stopped';
+    const uptime = data.uptime_seconds ? Math.floor(data.uptime_seconds / 60) + ' minutes' : 'N/A';
+    
+    statusContent.innerHTML = `
+        <p><strong>Status:</strong> ${running}</p>
+        <p><strong>Started:</strong> ${data.started_at || 'N/A'}</p>
+        <p><strong>Uptime:</strong> ${uptime}</p>
+        <p><strong>Last Heartbeat:</strong> ${data.last_heartbeat || 'N/A'}</p>
+        ${data.last_error ? `<p class="text-danger"><strong>Last Error:</strong> ${data.last_error}</p>` : ''}
+    `;
+}
+
+async function callAPI(endpoint, method = 'GET') {
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        if (token) headers['X-CSRFToken'] = token;
+        
+        const response = await fetch(endpoint, {
+            method: method,
+            headers: headers,
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        return { data, status: response.status };
+        
+    } catch (error) {
+        return { error: error.message, status: 500 };
+    }
+}
+
+// Button event handlers
+document.getElementById('btn-start').addEventListener('click', async () => {
+    const button = document.getElementById('btn-start');
+    button.disabled = true;
+    button.textContent = '🚀 Starting...';
+    
+    const result = await callAPI('/api/bot/start', 'POST');
+    
+    if (result.data) {
+        if (result.status === 200) {
+            showAlert(`✅ ${result.data.message}`, 'success');
+        } else if (result.status === 409) {
+            showAlert(`⚠️ ${result.data.message}`, 'warning');
+        } else {
+            showAlert(`❌ ${result.data.message}`, 'danger');
+        }
+    } else {
+        showAlert(`❌ Network error: ${result.error}`, 'danger');
+    }
+    
+    button.disabled = false;
+    button.textContent = '🚀 Start Bot';
+    
+    // Auto-refresh status
+    setTimeout(() => document.getElementById('btn-status').click(), 1000);
+});
+
+document.getElementById('btn-stop').addEventListener('click', async () => {
+    const button = document.getElementById('btn-stop');
+    button.disabled = true;
+    button.textContent = '🛑 Stopping...';
+    
+    const result = await callAPI('/api/bot/stop', 'POST');
+    
+    if (result.data) {
+        if (result.data.success) {
+            showAlert(`✅ ${result.data.message}`, 'success');
+        } else {
+            showAlert(`❌ ${result.data.message}`, 'danger');
+        }
+    } else {
+        showAlert(`❌ Network error: ${result.error}`, 'danger');
+    }
+    
+    button.disabled = false;
+    button.textContent = '🛑 Stop Bot';
+    
+    // Auto-refresh status
+    setTimeout(() => document.getElementById('btn-status').click(), 1000);
+});
+
+document.getElementById('btn-status').addEventListener('click', async () => {
+    const button = document.getElementById('btn-status');
+    button.disabled = true;
+    button.textContent = '📊 Loading...';
+    
+    const result = await callAPI('/api/bot/status', 'GET');
+    
+    if (result.data) {
+        updateStatus(result.data);
+        showAlert('Status updated', 'info');
+    } else {
+        showAlert(`❌ Status error: ${result.error}`, 'danger');
+    }
+    
+    button.disabled = false;
+    button.textContent = '📊 Get Status';
+});
+
+document.getElementById('btn-recover').addEventListener('click', async () => {
+    const button = document.getElementById('btn-recover');
+    button.disabled = true;
+    button.textContent = '🔄 Recovering...';
+    
+    const result = await callAPI('/api/bot/recover', 'POST');
+    
+    if (result.data) {
+        if (result.data.success) {
+            showAlert(`✅ ${result.data.message}`, 'success');
+        } else {
+            showAlert(`❌ ${result.data.message}`, 'danger');
+        }
+    } else {
+        showAlert(`❌ Recovery error: ${result.error}`, 'danger');
+    }
+    
+    button.disabled = false;
+    button.textContent = '🔄 Recover Orders';
+});
+
+// Auto-load status on page load
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-status').click();
+});
+</script>
+{% endblock %}

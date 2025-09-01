@@ -168,7 +168,7 @@ def _precise_px(exchange, symbol, raw):
     except Exception:
         return float(f"{raw:.8f}")
 
-def place_manual_tp_order(exchange, symbol, ccxt_side, entry_price, tp, amount, side, position_idx=None, exchange_name=None):
+def place_manual_tp_order(exchange, symbol, ccxt_side, entry_price, tp, amount, side, position_idx=None, exchange_name=None, user_id=None):
     try:
         market = exchange.market(symbol)
         tick_size, digits = _price_precision_to_tick_and_digits(market)  # 이 줄만 남기기!
@@ -187,11 +187,18 @@ def place_manual_tp_order(exchange, symbol, ccxt_side, entry_price, tp, amount, 
             print("[TP] 진입가와 TP 주문가가 너무 가까워서 TP 주문 생략!")
             return None
 
-        ms = int(time.time() * 1000)
+        # Use standardized idempotent tag for TP orders
+        if user_id:
+            from .bot import _standardized_tag
+            tag = _standardized_tag(user_id, 'tp', symbol)
+        else:
+            # Fallback for legacy calls
+            ms = int(time.time() * 1000)
+            tag = f'BOT_TP_{ms}'
+            
         exid = getattr(exchange, 'id', exchange_name) or ''
 
-        # ✅ 태그는 가능한 모든 필드에 주입
-        tag = f'BOT_TP_{ms}'
+        # ✅ 태그는 가능한 모든 필드에 주입 (with standardized tags)
         params = {
             'text': tag,
             'clientOrderId': tag,
