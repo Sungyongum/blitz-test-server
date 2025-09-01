@@ -1,0 +1,63 @@
+[Unit]
+Description=Blitz Trading Bot for User %i
+After=network.target
+PartOf=blitz-bot-manager.service
+
+[Service]
+Type=simple
+User=blitz
+Group=blitz
+WorkingDirectory=/opt/blitz-test-server
+Environment=PATH=/opt/blitz-test-server/venv/bin
+Environment=PYTHONPATH=/opt/blitz-test-server
+Environment=TZ=Asia/Seoul
+Environment=BLITZ_USER_ID=%i
+ExecStart=/opt/blitz-test-server/venv/bin/python3 -c "
+import sys, os
+sys.path.insert(0, '/opt/blitz-test-server')
+from Blitz_app import create_app
+from Blitz_app.bot import run_bot
+from threading import Event
+
+user_id = int(os.environ.get('BLITZ_USER_ID', '0'))
+if user_id == 0:
+    print('ERROR: BLITZ_USER_ID not set')
+    sys.exit(1)
+
+app = create_app()
+with app.app_context():
+    from Blitz_app.models import User
+    user = User.query.get(user_id)
+    if not user:
+        print(f'ERROR: User {user_id} not found')
+        sys.exit(1)
+    
+    config = user.to_dict()
+    config['api_key'] = user.api_key
+    config['api_secret'] = user.api_secret
+    config['telegram_token'] = user.telegram_token
+    config['telegram_chat_id'] = user.telegram_chat_id
+    
+    stop_event = Event()
+    try:
+        run_bot(config, stop_event, user_id, user.exchange or 'bybit')
+    except Exception as e:
+        print(f'Bot error: {e}')
+        sys.exit(1)
+"
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=10
+
+# Resource limits per bot
+LimitNOFILE=1024
+LimitNPROC=128
+
+# Security settings
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/blitz-test-server/instance
+
+[Install]
+WantedBy=multi-user.target

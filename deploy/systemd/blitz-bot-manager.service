@@ -1,0 +1,31 @@
+[Unit]
+Description=Blitz Bot Manager - Supervises per-user trading bots
+After=network.target blitz-web.service
+Wants=blitz-web.service
+
+[Service]
+Type=simple
+User=blitz
+Group=blitz
+WorkingDirectory=/opt/blitz-test-server
+Environment=PATH=/opt/blitz-test-server/venv/bin
+Environment=PYTHONPATH=/opt/blitz-test-server
+Environment=TZ=Asia/Seoul
+ExecStart=/opt/blitz-test-server/venv/bin/python3 -m Blitz_app.bot_manager
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Security settings
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/blitz-test-server/instance
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

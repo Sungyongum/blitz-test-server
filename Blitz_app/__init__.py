@@ -10,8 +10,9 @@ from datetime import datetime
 from flask_session import Session
 from redis import from_url
 from .extensions import db, login_manager
-from .models import User, Trade
+from .models import User, Trade, BotCommand, BotEvent, UserBot, OrderPlan, PnlSnapshot
 from .routes import main
+from .api_routes import api
 from .models.proxy_model import Proxy
 
 
@@ -37,7 +38,7 @@ def create_app():
     db.init_app(app)
 
     def register_models():
-        _= User, Trade, Proxy
+        _= User, Trade, Proxy, BotCommand, BotEvent, UserBot, OrderPlan, PnlSnapshot
     register_models()
 
     migrate = Migrate(app, db)
@@ -45,6 +46,7 @@ def create_app():
     login_manager.login_view = 'main.login'
     login_manager.init_app(app)
     app.register_blueprint(main)
+    app.register_blueprint(api)
     
 
     # 🔐 관리자 접근 제한 Mixin

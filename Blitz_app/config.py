@@ -58,10 +58,16 @@ try:
             cursor.execute("PRAGMA synchronous=NORMAL;")   # 쓰기 성능↑
             cursor.execute("PRAGMA temp_store=MEMORY;")
             cursor.execute("PRAGMA cache_size=-20000;")    # 약 20MB
+            cursor.execute("PRAGMA busy_timeout=30000;")   # 30초 대기
+            cursor.execute("PRAGMA foreign_keys=ON;")      # FK 제약조건 활성화
             cursor.close()
         except Exception:
             # 다른 DB(예: Postgres)에서는 조용히 통과
             pass
+
+    # Asia/Seoul 타임존 설정
+    import os
+    os.environ.setdefault('TZ', 'Asia/Seoul')
 except Exception:
     # SQLAlchemy가 아직 설치되지 않았거나 초기 로딩 이슈 시 무시
     pass
