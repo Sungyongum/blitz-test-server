@@ -5,6 +5,7 @@ from flask_login import current_user
 from flask_admin import Admin, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 from flask_session import Session
@@ -27,6 +28,15 @@ def datetimeformat(value):
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
     app.config.from_pyfile('config.py')
+
+    # Initialize CSRF protection
+    csrf = CSRFProtect(app)
+    
+    # Make CSRF token available in templates
+    @app.context_processor
+    def inject_csrf_token():
+        from flask_wtf.csrf import generate_csrf
+        return dict(csrf_token=generate_csrf())
 
     # 🔗 Session 초기화 (Redis 불가용시 filesystem 사용)
     if app.config.get("SESSION_TYPE", "").lower() == "redis":

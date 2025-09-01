@@ -289,6 +289,101 @@ class TestSimpleBotManagerLite(unittest.TestCase):
         non_success = [r for r in valid_results if not r.get('success', False)]
         self.assertGreaterEqual(len(non_success), 1, "At least one thread should be rejected")
 
+    @patch('simple_bot_manager.run_bot')
+    @patch('simple_bot_manager.db')
+    @patch('simple_bot_manager.UserBot')
+    @patch('simple_bot_manager.User')
+    def test_no_global_start_regression(self, mock_user_class, mock_user_bot_class, mock_db, mock_run_bot):
+        """Test that starting one user's bot doesn't start others (regression test)"""
+        # Create two mock users
+        user1_id = 123
+        user2_id = 456
+        
+        # Mock user1
+        mock_user1 = Mock()
+        mock_user1.id = user1_id
+        mock_user1.api_key = 'api_key_1'
+        mock_user1.api_secret = 'api_secret_1'
+        mock_user1.telegram_token = 'token_1'
+        mock_user1.telegram_chat_id = 'chat_1'
+        mock_user1.exchange = 'bybit'
+        mock_user1.to_dict.return_value = {'user_id': user1_id}
+        
+        # Mock user2
+        mock_user2 = Mock()
+        mock_user2.id = user2_id
+        mock_user2.api_key = 'api_key_2'
+        mock_user2.api_secret = 'api_secret_2'
+        mock_user2.telegram_token = 'token_2'
+        mock_user2.telegram_chat_id = 'chat_2'
+        mock_user2.exchange = 'bybit'
+        mock_user2.to_dict.return_value = {'user_id': user2_id}
+        
+        def mock_query_get(user_id):
+            if user_id == user1_id:
+                return mock_user1
+            elif user_id == user2_id:
+                return mock_user2
+            return None
+            
+        mock_user_class.query.get.side_effect = mock_query_get
+        mock_user_bot_class.query.get.return_value = Mock()
+        
+        # Mock run_bot to simulate a quick running function
+        def mock_run_bot_func(*args, **kwargs):
+            pass
+        mock_run_bot.side_effect = mock_run_bot_func
+        
+        # Start bot for user1 only
+        result1 = self.manager.start_bot_for_user(user1_id)
+        self.assertTrue(result1['success'])
+        self.assertEqual(result1['status'], 'started')
+        
+        # Verify only user1's bot is managed (key test for regression)
+        self.assertIn(user1_id, self.manager.managed_bots)
+        self.assertNotIn(user2_id, self.manager.managed_bots)
+        
+        # Key assertion: only 1 user should have a managed bot
+        self.assertEqual(len(self.manager.managed_bots), 1, 
+                       "Only one user should have a bot started, not all users")
+        
+        # Verify user2's bot status shows not running
+        status2 = self.manager.get_bot_status(user2_id)
+        self.assertFalse(status2['running'])
+        self.assertEqual(status2['status'], 'not_running')
+        
+        # Cleanup
+        self.manager.stop_bot_for_user(user1_id)
+
+    def test_recover_orders_idempotence(self):
+        """Test that recover_orders_for_user is idempotent (can be called multiple times safely)"""
+        user_id = 789
+        
+        # Mock user data
+        with patch('simple_bot_manager.User') as mock_user_class:
+            mock_user = Mock()
+            mock_user.id = user_id
+            mock_user_class.query.get.return_value = mock_user
+            
+            # Call recover multiple times
+            result1 = self.manager.recover_orders_for_user(user_id)
+            result2 = self.manager.recover_orders_for_user(user_id)
+            result3 = self.manager.recover_orders_for_user(user_id)
+            
+            # All calls should succeed and be safe
+            self.assertTrue(result1['success'])
+            self.assertTrue(result2['success'])
+            self.assertTrue(result3['success'])
+            
+            # Should contain appropriate actions (even if placeholder)
+            self.assertIn('actions', result1)
+            self.assertIn('actions', result2)
+            self.assertIn('actions', result3)
+            
+            # Results should be consistent
+            self.assertEqual(result1['message'], result2['message'])
+            self.assertEqual(result2['message'], result3['message'])
+
 
 class TestIdempotentTagPatterns(unittest.TestCase):
     """Focused tests for idempotent tag patterns"""

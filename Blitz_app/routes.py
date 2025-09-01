@@ -426,91 +426,54 @@ def admin_lite():
 @main.route('/start', methods=['GET', 'POST'])
 @login_required
 def start_bot():
-    proxy = Proxy.query.filter_by(assigned_user_id=current_user.id).first()
-    if getattr(current_user, 'exchange', 'bybit') == 'bybit' and not proxy:
-        flash("⚠️ 프록시가 할당되지 않아 봇을 시작할 수 없습니다. 관리자에게 문의해주세요.", "danger")
-        # Admin alert removed for lite server
-        return redirect(url_for('main.index'))
-
-    if current_user.id in bot_events and not bot_events[current_user.id].is_set():
-        flash("봇이 이미 실행 중입니다.", "warning")
-        return redirect(url_for('main.index'))
-
-    old_ev = bot_events.pop(current_user.id, None)
-    if old_ev:
-        old_ev.set()
-
-    event = Event()
-    bot_events[current_user.id] = event
-
-    user_config = current_user.to_dict()
-    user_config['telegram_token'] = current_user.telegram_token
-    user_config['telegram_chat_id'] = current_user.telegram_chat_id
-
-    # 반복정지 오버라이드 초기화(새 실행)
-    repeat_overrides[current_user.id] = None
-
-    logger.info(f"🟢 봇 시작 요청됨 - user_id={current_user.id}")
-    logger.info(f"🟢 봇 config: {json.dumps(user_config, indent=2, ensure_ascii=False)}")
-
-    exchange_name = getattr(current_user, 'exchange', 'bybit') or 'bybit'
-    from threading import Thread
-    run_bot_func = _get_run_bot()  # ← 최신 run_bot 로드
-    Thread(
-        target=run_bot_func,
-        args=(user_config, event, current_user.id, exchange_name),
-        daemon=True
-    ).start()
+    Legacy start route - uses the SimpleBotManager API internally for consistency.
+    This prevents dual bot management systems from conflicting.
+    """
+    # Use SimpleBotManager instead of legacy thread spawning
+    from simple_bot_manager import get_simple_bot_manager
     
-    flash('자동매매가 시작되었습니다.', 'success')
+    manager = get_simple_bot_manager()
+    if not manager:
+        flash("봇 매니저가 초기화되지 않았습니다.", "danger")
+        return redirect(url_for('main.index'))
+    
+    result = manager.start_bot_for_user(current_user.id)
+    
+    # Flash appropriate message based on result
+    if result['success']:
+        flash('자동매매가 시작되었습니다.', 'success')
+    elif result['status'] == 'already_running':
+        flash('봇이 이미 실행 중입니다.', 'warning')
+    else:
+        flash(f"봇 시작 실패: {result['message']}", 'danger')
+    
     return redirect(url_for('main.index'))
 
 
 @main.route('/stop', methods=['GET', 'POST'])
 @login_required
 def stop_bot():
-    ev = bot_events.pop(current_user.id, None)
-    if ev:
-        ev.set()
-
-    try:
-        if current_user.exchange == 'bingx':
-            ex = ccxt.bingx({
-                'apiKey': current_user.api_key,
-                'secret': current_user.api_secret,
-                'enableRateLimit': True,
-                'options': {'defaultType': 'swap'},
-            })
-            ex.load_markets()
-            sym = normalize_symbol(current_user.symbol, get_futures_markets(ex))
-            try:
-                ex.cancel_all_orders(symbol=sym)  # BingX OK
-            except Exception:
-                pass
-            cancel_all_open_orders_hard(ex, sym, params=params)
-
-        else:
-            ex = ccxt.bybit({
-                'apiKey': current_user.api_key,
-                'secret': current_user.api_secret,
-                'enableRateLimit': True,
-                'options': {'defaultType': 'contract', 'category': 'linear'},
-            })
-            ex.load_markets()
-            sym = normalize_symbol(current_user.symbol, get_futures_markets(ex))
-            try:
-                # ★ Bybit는 category 지정
-                ex.cancel_all_orders(symbol=sym, params={'category': 'linear'})
-            except Exception:
-                pass
-            params = _bybit_order_params_for_user(current_user)
-            cancel_all_open_orders_hard(ex, sym, params=params)
-
-        logging.info(f"[{current_user.id}] 모든 주문 취소 완료")
-    except Exception as e:
-        logging.error(f"주문 취소 중 오류: {e}")
-
-    flash('자동매매가 중단되었습니다.', 'info')
+    Legacy stop route - uses SimpleBotManager API internally for consistency.
+    This prevents dual bot management systems from conflicting.
+    """
+    # Use SimpleBotManager instead of legacy bot_events
+    from simple_bot_manager import get_simple_bot_manager
+    
+    manager = get_simple_bot_manager()
+    if not manager:
+        flash("봇 매니저가 초기화되지 않았습니다.", "danger")
+        return redirect(url_for('main.index'))
+    
+    result = manager.stop_bot_for_user(current_user.id)
+    
+    # Flash appropriate message based on result
+    if result['success']:
+        flash('자동매매가 중단되었습니다.', 'success')
+    elif result['status'] == 'not_running':
+        flash('실행 중인 봇이 없습니다.', 'info')
+    else:
+        flash(f"봇 중단 실패: {result['message']}", 'danger')
+    
     return redirect(url_for('main.index'))
 
 

@@ -172,11 +172,13 @@ Users are stored in the database with their trading credentials:
 ## Web Interface
 
 ### User Interface (`/`)
-Simple control panel with 4 buttons:
-- **🚀 Start Bot**: Start the trading bot
-- **🛑 Stop Bot**: Stop the trading bot  
-- **📊 Get Status**: Check bot status
-- **🔧 Recover Orders**: Recover missing orders
+Simplified control panel with 4 core buttons for bot management:
+- **🚀 Start Bot**: Start the trading bot for current user
+- **🛑 Stop Bot**: Stop the trading bot for current user  
+- **📊 Get Status**: Check bot status and uptime
+- **🔧 Recover Orders**: Recover missing orders (idempotent, safe to retry)
+
+The interface now mirrors blitz-test styling and focuses on the essential bot control functions with CSRF-protected API calls for security.
 
 ### Admin Interface (`/admin/lite`)
 Basic management console for admins:
@@ -232,7 +234,37 @@ For the LITE version, the following heavy features were removed:
 - ❌ Environment-based user credentials
 - ❌ Redis session dependency (uses filesystem)
 
-## Testing
+## Recent Improvements
+
+### v1.1 - Unified Bot Management & Security Enhancements
+
+#### Fixed Global Start Bug
+- **Issue**: Legacy routes could potentially conflict with SimpleBotManager
+- **Fix**: All bot start/stop operations now use SimpleBotManager exclusively
+- **Verification**: Added regression test `test_no_global_start_regression`
+
+#### Enhanced Security
+- **CSRF Protection**: Added CSRF token validation for all POST requests
+- **API Security**: API endpoints properly exempted from CSRF (intended for programmatic access)
+- **Template Security**: CSRF tokens automatically included in UI fetch calls
+
+#### Recovery Flow Improvements  
+- **Idempotence**: `recover_orders_for_user` can be safely called multiple times
+- **Testing**: Added `test_recover_orders_idempotence` for verification
+- **UI Feedback**: Clear success/error messages with detailed actions taken
+
+#### Template Refinements
+- **Simplified UI**: Index page focused on 4 core control buttons
+- **Improved UX**: Better status indicators and real-time feedback
+- **Consistent Styling**: Enhanced visual consistency across the interface
+
+#### Testing Coverage
+- ✅ No global start regression test
+- ✅ Recovery idempotence test  
+- ✅ Thread safety validation
+- ✅ Duplicate start rejection
+- ✅ Order tag consistency
+
 
 Run the test suite to validate functionality:
 
