@@ -28,10 +28,16 @@ def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
     app.config.from_pyfile('config.py')
 
-    # 🔗 Redis 세션 객체 주입 (경고 제거 포인트)
+    # 🔗 Session 초기화 (Redis 불가용시 filesystem 사용)
     if app.config.get("SESSION_TYPE", "").lower() == "redis":
-        redis_url = app.config.get("SESSION_REDIS_URL", "redis://127.0.0.1:6379/0")
-        app.config["SESSION_REDIS"] = from_url(redis_url, decode_responses=False)
+        try:
+            redis_url = app.config.get("SESSION_REDIS_URL", "redis://127.0.0.1:6379/0")
+            app.config["SESSION_REDIS"] = from_url(redis_url, decode_responses=False)
+        except Exception as e:
+            # Redis 연결 실패시 filesystem으로 fallback
+            print(f"⚠️ Redis 연결 실패, filesystem 세션으로 변경: {e}")
+            app.config["SESSION_TYPE"] = "filesystem"
+            app.config["SESSION_FILE_DIR"] = app.config.get("SESSION_FILE_DIR", "./instance/flask_session")
 
     Session(app)
 

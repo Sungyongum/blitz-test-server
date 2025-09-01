@@ -367,3 +367,49 @@ def admin_list_users():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# PnL API routes
+@api.route('/users/<int:user_id>/pnl/summary', methods=['GET'])
+@login_required
+def get_user_pnl_summary(user_id):
+    """사용자 PnL 요약 조회"""
+    if not is_admin() and current_user.id != user_id:
+        return jsonify({'error': 'Forbidden'}), 403
+    
+    try:
+        from .pnl_service import PnlService
+        summary = PnlService.get_user_pnl_summary(user_id)
+        return jsonify(summary)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/users/<int:user_id>/pnl/daily', methods=['GET'])
+@login_required
+def get_user_daily_pnl(user_id):
+    """사용자 일별 PnL 조회"""
+    if not is_admin() and current_user.id != user_id:
+        return jsonify({'error': 'Forbidden'}), 403
+    
+    try:
+        from .pnl_service import PnlService
+        daily_data = PnlService.aggregate_daily_pnl(user_id, update_snapshots=True)
+        return jsonify({'daily_data': daily_data})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/admin/pnl/all_users', methods=['GET'])
+@login_required
+def get_all_users_pnl():
+    """전체 사용자 PnL 요약"""
+    if not is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        from .pnl_service import PnlService
+        summaries = PnlService.get_all_users_pnl_summary()
+        return jsonify({'users': summaries})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -1340,6 +1340,26 @@ def admin_update_exchange(user_id):
             flash('유효하지 않은 거래소 선택입니다.', 'danger')
     return redirect(url_for('main.admin_page'))
 
+@main.route('/admin_enhanced')
+@login_required
+def admin_enhanced():
+    """Enhanced admin page with bot management"""
+    if not is_admin():
+        flash("관리자 권한이 필요합니다.", "danger")
+        return redirect(url_for('main.index'))
+    
+    return render_template('admin_enhanced.html')
+
+@main.route('/pnl_dashboard')
+@login_required
+def pnl_dashboard():
+    """PnL Dashboard with charts and analytics"""
+    if not is_admin():
+        flash("관리자 권한이 필요합니다.", "danger")
+        return redirect(url_for('main.index'))
+    
+    return render_template('pnl_dashboard.html')
+
 @main.route('/admin/pnl_summary')
 @login_required
 def admin_pnl_summary():

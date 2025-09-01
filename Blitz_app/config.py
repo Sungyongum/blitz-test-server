@@ -29,14 +29,18 @@ SECRET_KEY = (
 # (선택) 8000과 8001을 동시에 쓸 때 쿠키 충돌 방지용 이름 지정 가능
 SESSION_COOKIE_NAME = os.environ.get("BLITZ_SESSION_COOKIE", "session")
 
-# ✅ Redis 세션 공유 설정
-SESSION_TYPE = "redis"
-SESSION_REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
+# ✅ Session 설정 (Redis 대신 filesystem 사용)
+SESSION_TYPE = "filesystem"
+SESSION_FILE_DIR = BASE_DIR / "instance" / "flask_session"
 SESSION_PERMANENT = True
 PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 SESSION_USE_SIGNER = True     # 쿠키 위변조 방지
 SESSION_COOKIE_SECURE = False # HTTPS가 아니면 False (나중에 SSL 붙이면 True로)
 SESSION_COOKIE_SAMESITE = "Lax"
+
+# Redis URL for production (commented out for development)
+# SESSION_TYPE = "redis"
+# SESSION_REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # 템플릿/디버그 최적화
 DEBUG = False
