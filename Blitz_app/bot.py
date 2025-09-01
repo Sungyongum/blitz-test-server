@@ -175,10 +175,21 @@ def _get_exchange(exchange_name, api_key, api_secret):
     ex.load_markets()
     return ex
 
-def _bot_tag(user_id: int, purpose: str):
-    # purpose: 'ENTRY' | 'TP' | 'SL' 등
-    import time, random
-    return f"BOT_{purpose}_{user_id}_{int(time.time()*1000)}_{random.randint(100,999)}"
+def _standardized_tag(user_id: int, purpose: str, symbol: str, leg_index: int = None) -> str:
+    """
+    Generate standardized idempotent order tags according to LITE spec:
+    - leg:  sm_leg_{i}_{userId}_{symbolNoSep}
+    - tp:   sm_tp_{userId}_{symbolNoSep}
+    """
+    symbol_no_sep = symbol.replace('/', '').replace(':', '')
+    
+    if purpose == 'leg' and leg_index is not None:
+        return f"sm_leg_{leg_index}_{user_id}_{symbol_no_sep}"
+    elif purpose == 'tp':
+        return f"sm_tp_{user_id}_{symbol_no_sep}"
+    else:
+        # Fallback for other purposes
+        return f"sm_{purpose}_{user_id}_{symbol_no_sep}"
 
 def build_params_for_exchange(ex, *, tag, position_side=None, is_tp=False, is_sl=False, hedge_mode=False):
     """
@@ -244,8 +255,8 @@ def _is_bot_tagged(order_obj) -> bool:
             info.get('label') or '',
         ]
         up = [str(x).upper() for x in fields if x]
-        # 우리 태그 컨벤션이 BOT_... 이므로 startswith('BOT')가 가장 안전
-        return any(s.startswith('BOT') for s in up)
+        # Check for new standardized tags (sm_*) or legacy BOT_* tags
+        return any(s.startswith('SM_') or s.startswith('BOT') for s in up)
     except Exception:
         return False
 
@@ -777,15 +788,17 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                                               f"❌ 주문수량 {coin_qty}는 최소수량({min_qty})보다 적음.")
                                 return
 
-                            order_params = {'text': 'BOT_ORDER'}
+                            # Use standardized idempotent tag for entry orders
+                            tag = _standardized_tag(user_id, 'leg', symbol, leg_index=1)
+                            order_params = build_params_for_exchange(
+                                exchange_name, 
+                                tag=tag,
+                                position_side='LONG' if side == 'long' else 'SHORT',
+                                is_tp=False,
+                                hedge_mode=(exchange_name == 'bingx')
+                            )
                             if use_position_idx:
                                 order_params['positionIdx'] = position_idx
-                            if exchange_name == 'bingx':
-                                order_params['positionSide'] = 'LONG' if side == 'long' else 'SHORT'
-                                order_params['clientOrderId'] = f"BOT_{int(time.time()*1000)}"
-                            else:
-                                order_params['reduceOnly'] = False
-                                order_params['orderLinkId'] = f"BOT_{int(time.time()*1000)}"
 
                             entry_res = exchange.create_order(symbol, 'market', ccxt_side, coin_qty, None, order_params)
                             _register_order(entry_res)   
@@ -826,13 +839,13 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                             # 초기가격 기준 TP/SL 세팅
                             if filled_amount >= min_qty:
                                 if use_position_idx:
-                                    tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, filled_price, tp, filled_amount, side, position_idx, exchange_name)
+                                    tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, filled_price, tp, filled_amount, side, position_idx, exchange_name, user_id)
                                     if tp > 0 and tp_res: _register_order(tp_res)
                                     if sl > 0:
                                         sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, filled_price, sl, filled_amount, side, position_idx, exchange_name)
                                         if sl_res: _register_order(sl_res)
                                 else:
-                                    tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, filled_price, tp, filled_amount, side, None, exchange_name)
+                                    tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, filled_price, tp, filled_amount, side, None, exchange_name, user_id)
                                     if tp > 0 and tp_res: _register_order(tp_res)
                                     if sl > 0:
                                         sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, filled_price, sl, filled_amount, side, None, exchange_name)
@@ -864,15 +877,17 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                                 if grid_qty < min_qty:
                                     continue
 
-                                grid_order_params = {'text': 'BOT_ORDER'}
+                                # Use standardized idempotent tag for grid orders
+                                tag = _standardized_tag(user_id, 'leg', symbol, leg_index=i)
+                                grid_order_params = build_params_for_exchange(
+                                    exchange_name,
+                                    tag=tag,
+                                    position_side='LONG' if side == 'long' else 'SHORT',
+                                    is_tp=False,
+                                    hedge_mode=(exchange_name == 'bingx')
+                                )
                                 if use_position_idx:
                                     grid_order_params['positionIdx'] = position_idx
-                                if exchange_name == 'bingx':
-                                    grid_order_params['positionSide'] = 'LONG' if side == 'long' else 'SHORT'
-                                    grid_order_params['clientOrderId'] = f"BOT_GRID_{i}_{int(time.time()*1000)}"
-                                else:
-                                    grid_order_params['reduceOnly'] = False
-                                    grid_order_params['orderLinkId'] = f"BOT_GRID_{i}_{int(time.time()*1000)}"
 
                                 res = exchange.create_order(symbol, 'limit', ccxt_side, grid_qty, target_price, grid_order_params)
                                 _register_order(res)   # ✅ 추가
@@ -891,14 +906,14 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                                 if sz > last_size and sz >= min_qty:
                                     if use_position_idx:
                                         cancel_tp_sl_orders(exchange, symbol, position_idx)
-                                        tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, ne, tp, sz, side, position_idx, exchange_name)
+                                        tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, ne, tp, sz, side, position_idx, exchange_name, user_id)
                                         if tp > 0 and tp_res: _register_order(tp_res)
                                         if sl > 0:
                                             sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, ne, sl, sz, side, position_idx, exchange_name)
                                             if sl_res: _register_order(sl_res)
                                     else:
                                         cancel_tp_sl_orders(exchange, symbol)
-                                        tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, ne, tp, sz, side, None, exchange_name)
+                                        tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, ne, tp, sz, side, None, exchange_name, user_id)
                                         if tp > 0 and tp_res: _register_order(tp_res)
                                         if sl > 0:
                                             sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, ne, sl, sz, side, None, exchange_name)
@@ -932,14 +947,14 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                         if sz > 0 and tp > 0 and (last_tp_sl_avg_price is None or abs(current_entry - last_tp_sl_avg_price) > price_update_threshold):
                             if use_position_idx:
                                 cancel_tp_sl_orders(exchange, symbol, position_idx)
-                                tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, current_entry, tp, sz, side, position_idx, exchange_name)
+                                tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, current_entry, tp, sz, side, position_idx, exchange_name, user_id)
                                 if tp > 0 and tp_res: _register_order(tp_res)
                                 if sl > 0:
                                     sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, current_entry, sl, sz, side, position_idx, exchange_name)
                                     if sl_res: _register_order(sl_res)
                             else:
                                 cancel_tp_sl_orders(exchange, symbol)
-                                tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, current_entry, tp, sz, side, None, exchange_name)
+                                tp_res = place_manual_tp_order(exchange, symbol, ccxt_side, current_entry, tp, sz, side, None, exchange_name, user_id)
                                 if tp > 0 and tp_res: _register_order(tp_res)
                                 if sl > 0:
                                     sl_res = place_manual_sl_order(exchange, symbol, ccxt_side, current_entry, sl, sz, side, None, exchange_name)
