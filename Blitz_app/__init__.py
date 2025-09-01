@@ -54,6 +54,14 @@ def create_app():
     app.register_blueprint(main)
     app.register_blueprint(api)
     
+    # Register SimpleBotManager API routes
+    from .api_bot_routes import api_bot
+    app.register_blueprint(api_bot)
+    
+    # Initialize SimpleBotManager 
+    from simple_bot_manager import init_simple_bot_manager
+    init_simple_bot_manager(app)
+    
 
     # 🔐 관리자 접근 제한 Mixin
     class AdminAccessMixin:

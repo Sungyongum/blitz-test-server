@@ -176,41 +176,78 @@ def _get_exchange(exchange_name, api_key, api_secret):
     return ex
 
 def _bot_tag(user_id: int, purpose: str):
-    # purpose: 'ENTRY' | 'TP' | 'SL' 등
+    # Legacy function - kept for compatibility
+    # New code should use build_idempotent_tag()
     import time, random
     return f"BOT_{purpose}_{user_id}_{int(time.time()*1000)}_{random.randint(100,999)}"
 
+def build_idempotent_tag(user_id: int, symbol: str, purpose: str, leg_index: int = None) -> str:
+    """
+    Build standardized idempotent order tags for SimpleBotManager.
+    
+    Args:
+        user_id: User ID
+        symbol: Trading symbol (e.g., 'BTC/USDT:USDT')
+        purpose: 'leg' or 'tp' 
+        leg_index: For ladder legs, the index (0, 1, 2, ...)
+    
+    Returns:
+        Standardized tag: sm_leg_{i}_{userId}_{symbolNoSep} or sm_tp_{userId}_{symbolNoSep}
+    """
+    # Clean symbol: remove '/' and ':'
+    symbol_no_sep = symbol.replace('/', '').replace(':', '')
+    
+    if purpose == 'leg' and leg_index is not None:
+        return f"sm_leg_{leg_index}_{user_id}_{symbol_no_sep}"
+    elif purpose == 'tp':
+        return f"sm_tp_{user_id}_{symbol_no_sep}"
+    else:
+        # Fallback for other purposes
+        return f"sm_{purpose}_{user_id}_{symbol_no_sep}"
+
 def build_params_for_exchange(ex, *, tag, position_side=None, is_tp=False, is_sl=False, hedge_mode=False):
     """
-    ex: 'bybit' | 'bingx' | ...
-    공통으로 tag를 가능한 모든 필드에 주입.
-    BingX Hedge 모드일 땐 reduceOnly를 빼준다.
+    Build exchange-specific order parameters with idempotent tag propagation.
+    
+    For SimpleBotManager, use with build_idempotent_tag() for consistent tagging:
+    - tag = build_idempotent_tag(user_id, symbol, 'leg', leg_index) for ladder legs
+    - tag = build_idempotent_tag(user_id, symbol, 'tp') for take profit orders
+    
+    Args:
+        ex: Exchange name ('bybit', 'bingx', etc.)
+        tag: Idempotent order tag to propagate to all possible CCXT fields
+        position_side: Position side for hedge mode exchanges ('LONG', 'SHORT')
+        is_tp: True if this is a take profit order (sets reduceOnly)
+        is_sl: True if this is a stop loss order (sets reduceOnly)  
+        hedge_mode: True if exchange is in hedge mode (affects reduceOnly for BingX)
+    
+    Returns:
+        Dict of parameters to pass to exchange order creation
     """
     p = {}
 
-    # 태그는 가능한 모든 곳에 넣어 교차 인식
+    # Propagate tag to ALL possible CCXT order fields for maximum compatibility
     p['text'] = tag
     p['clientOrderId'] = tag
-    p['clientOrderID'] = tag
-    p['newClientOrderId'] = tag
-    p['orderLinkId'] = tag
-    p['label'] = tag
+    p['clientOrderID'] = tag  # Alternative spelling
+    p['newClientOrderId'] = tag  # For order amendments
+    p['orderLinkId'] = tag  # Bybit-specific
+    p['label'] = tag  # Some exchanges use this
 
-    # 포지션 방향 필요 시
+    # Position side for hedge mode exchanges
     if position_side:
-        # bingx/바이낸스 계열
         p['positionSide'] = position_side.upper()  # 'LONG' | 'SHORT'
 
-    # reduceOnly 처리
+    # reduceOnly handling for TP/SL orders
     if ex == 'bingx' and hedge_mode:
-        # ❌ BingX Hedge 모드 오류(109400) 방지: reduceOnly 금지
+        # BingX Hedge mode error (109400) prevention: no reduceOnly
         p.pop('reduceOnly', None)
     else:
-        # Bybit 등에서는 TP/SL에 보통 reduceOnly가 필요
+        # Most exchanges need reduceOnly=True for TP/SL orders
         if is_tp or is_sl:
             p['reduceOnly'] = True
 
-    # 타임인포스 등 기본
+    # Default time in force
     p.setdefault('timeInForce', 'GTC')
     return p
 

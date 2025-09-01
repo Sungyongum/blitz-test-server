@@ -9,8 +9,7 @@ from flask import current_app
 from . import db
 import importlib
 from .utils import normalize_symbol
-from .telegram import send_telegram
-from .email_utils import send_email
+# Removed telegram/email admin alerts for lite server
 from .trade_log import load_trade_log
 from .extensions import login_manager
 from .models import User, Proxy, StatusLog
@@ -145,6 +144,20 @@ def get_futures_markets(exchange):
 @main.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
+    # Redirect to lite user interface
+    return render_template('user_lite.html')
+
+@main.route('/admin/lite')
+@login_required  
+def admin_lite():
+    # Check admin permission
+    if current_user.email != 'admin@admin.com':
+        flash("Admin access required", "danger")
+        return redirect(url_for('main.index'))
+    
+    return render_template('admin_lite.html')
+
+# Legacy routes for backwards compatibility (removed duplicate admin_page)
     total_equity = None
     free_usdt = None
     current_position = None
@@ -416,13 +429,7 @@ def start_bot():
     proxy = Proxy.query.filter_by(assigned_user_id=current_user.id).first()
     if getattr(current_user, 'exchange', 'bybit') == 'bybit' and not proxy:
         flash("⚠️ 프록시가 할당되지 않아 봇을 시작할 수 없습니다. 관리자에게 문의해주세요.", "danger")
-        admin = User.query.filter_by(email='admin@admin.com').first()
-        if admin and admin.telegram_token and admin.telegram_chat_id:
-            try:
-                send_telegram(admin.telegram_token, admin.telegram_chat_id,
-                              f"⚠️ 프록시 부족: {current_user.email} (id={current_user.id})")
-            except Exception as e:
-                logger.warning(f"[텔레그램 전송 실패] {e}")
+        # Admin alert removed for lite server
         return redirect(url_for('main.index'))
 
     if current_user.id in bot_events and not bot_events[current_user.id].is_set():
@@ -507,88 +514,88 @@ def stop_bot():
     return redirect(url_for('main.index'))
 
 
-@main.route('/exit_and_stop', methods=['GET', 'POST'])
-@login_required
-def exit_and_stop():
-    ev = bot_events.pop(current_user.id, None)
-    if ev:
-        ev.set()
-
-    try:
-        if current_user.exchange == 'bingx':
-            ex = ccxt.bingx({
-                'apiKey': current_user.api_key,
-                'secret': current_user.api_secret,
-                'enableRateLimit': True,
-                'options': {'defaultType': 'swap'},
-            })
-            ex.load_markets()
-            symbol = normalize_symbol(current_user.symbol, get_futures_markets(ex))
-
-            # 취소 → 하드 취소
-            try:
-                ex.cancel_all_orders(symbol=symbol)
-            except Exception:
-                pass
-            cancel_all_open_orders_hard(ex, symbol)
-
-            # 시장가 청산
-            positions = ex.fetch_positions([symbol]) or []
-            for pos in positions:
-                contracts = float(pos.get('contracts') or pos.get('contractsSize') or 0)
-                if contracts > 0:
-                    side = (pos.get('side') or '').lower()
-                    close_side = 'sell' if side == 'long' else 'buy'
-                    try:
-                        ex.create_order(
-                            symbol=symbol, type='market', side=close_side,
-                            amount=contracts, price=None,
-                            params={'positionSide': 'LONG' if side == 'long' else 'SHORT'}
-                        )
-                    except Exception as ce:
-                        print(f"[EXIT] (BingX) 청산 실패: {ce}")
-
-        else:
-            ex = ccxt.bybit({
-                'apiKey': current_user.api_key,
-                'secret': current_user.api_secret,
-                'enableRateLimit': True,
-                'options': {'defaultType': 'contract', 'category': 'linear'},
-            })
-            ex.load_markets()
-            symbol = normalize_symbol(current_user.symbol, get_futures_markets(ex))
-            params = _bybit_order_params_for_user(current_user)
-
-            # 취소 → 하드 취소
-            try:
-                ex.cancel_all_orders(symbol=symbol, params={'category': 'linear'})
-            except Exception:
-                pass
-            cancel_all_open_orders_hard(ex, symbol, params=params)
-
-            # 시장가 청산
-            positions = ex.fetch_positions([symbol], params={'category': 'linear'}) or []
-            position_idx_map = {'long': 1, 'short': 2}
-            for pos in positions:
-                contracts = float(pos.get('contracts') or 0)
-                if contracts > 0:
-                    side = (pos.get('side') or '').lower()
-                    close_side = 'sell' if side == 'long' else 'buy'
-                    position_idx = position_idx_map.get(side, None)
-                    try:
-                        ex.create_order(
-                            symbol=symbol, type='market', side=close_side,
-                            amount=contracts, price=None,
-                            params={'category': 'linear', 'reduceOnly': True, 'positionIdx': position_idx}
-                        )
-                    except Exception as ce:
-                        print(f"[EXIT] 청산 실패: {ce}")
-
-    except Exception as e:
-        print("[EXIT] 포지션 청산/주문취소 오류:", e)
-
-    flash('포지션과 모든 주문이 청산/취소되고 완전히 종료되었습니다.', 'info')
-    return redirect(url_for('main.index'))
+# @main.route('/exit_and_stop', methods=['GET', 'POST'])
+# @login_required
+# def exit_and_stop():
+#     ev = bot_events.pop(current_user.id, None)
+#     if ev:
+#         ev.set()
+# 
+#     try:
+#         if current_user.exchange == 'bingx':
+#             ex = ccxt.bingx({
+#                 'apiKey': current_user.api_key,
+#                 'secret': current_user.api_secret,
+#                 'enableRateLimit': True,
+#                 'options': {'defaultType': 'swap'},
+#             })
+#             ex.load_markets()
+#             symbol = normalize_symbol(current_user.symbol, get_futures_markets(ex))
+# 
+#             # 취소 → 하드 취소
+#             try:
+#                 ex.cancel_all_orders(symbol=symbol)
+#             except Exception:
+#                 pass
+#             cancel_all_open_orders_hard(ex, symbol)
+# 
+#             # 시장가 청산
+#             positions = ex.fetch_positions([symbol]) or []
+#             for pos in positions:
+#                 contracts = float(pos.get('contracts') or pos.get('contractsSize') or 0)
+#                 if contracts > 0:
+#                     side = (pos.get('side') or '').lower()
+#                     close_side = 'sell' if side == 'long' else 'buy'
+#                     try:
+#                         ex.create_order(
+#                             symbol=symbol, type='market', side=close_side,
+#                             amount=contracts, price=None,
+#                             params={'positionSide': 'LONG' if side == 'long' else 'SHORT'}
+#                         )
+#                     except Exception as ce:
+#                         print(f"[EXIT] (BingX) 청산 실패: {ce}")
+# 
+#         else:
+#             ex = ccxt.bybit({
+#                 'apiKey': current_user.api_key,
+#                 'secret': current_user.api_secret,
+#                 'enableRateLimit': True,
+#                 'options': {'defaultType': 'contract', 'category': 'linear'},
+#             })
+#             ex.load_markets()
+#             symbol = normalize_symbol(current_user.symbol, get_futures_markets(ex))
+#             params = _bybit_order_params_for_user(current_user)
+# 
+#             # 취소 → 하드 취소
+#             try:
+#                 ex.cancel_all_orders(symbol=symbol, params={'category': 'linear'})
+#             except Exception:
+#                 pass
+#             cancel_all_open_orders_hard(ex, symbol, params=params)
+# 
+#             # 시장가 청산
+#             positions = ex.fetch_positions([symbol], params={'category': 'linear'}) or []
+#             position_idx_map = {'long': 1, 'short': 2}
+#             for pos in positions:
+#                 contracts = float(pos.get('contracts') or 0)
+#                 if contracts > 0:
+#                     side = (pos.get('side') or '').lower()
+#                     close_side = 'sell' if side == 'long' else 'buy'
+#                     position_idx = position_idx_map.get(side, None)
+#                     try:
+#                         ex.create_order(
+#                             symbol=symbol, type='market', side=close_side,
+#                             amount=contracts, price=None,
+#                             params={'category': 'linear', 'reduceOnly': True, 'positionIdx': position_idx}
+#                         )
+#                     except Exception as ce:
+#                         print(f"[EXIT] 청산 실패: {ce}")
+# 
+#     except Exception as e:
+#         print("[EXIT] 포지션 청산/주문취소 오류:", e)
+# 
+#     flash('포지션과 모든 주문이 청산/취소되고 완전히 종료되었습니다.', 'info')
+#     return redirect(url_for('main.index'))
 
 
 @main.route('/status_api')
@@ -637,30 +644,7 @@ def status_api():
     return jsonify(payload)
 
 
-@main.route('/force_refresh', methods=['POST'])
-@login_required
-def force_refresh():
-    force_refresh_flags[current_user.id] = True
-    single_refresh_flags.pop(current_user.id, None)
-    flash('연속 강제 갱신 모드로 전환했습니다.', 'info')
-    return redirect(url_for('main.index'))
-
-
-@main.route('/clear_force_refresh', methods=['POST'])
-@login_required
-def clear_force_refresh():
-    force_refresh_flags[current_user.id] = False
-    single_refresh_flags.pop(current_user.id, None)
-    flash('연속 강제 갱신을 해제했습니다.', 'info')
-    return redirect(url_for('main.index'))
-
-
-@main.route('/single_refresh', methods=['POST'])
-@login_required
-def single_refresh():
-    single_refresh_flags[current_user.id] = True
-    flash('다음 사이클 한 번만 강제 갱신합니다.', 'info')
-    return redirect(url_for('main.index'))
+# Legacy refresh endpoints removed - use SimpleBotManager instead
 
 
 @login_manager.user_loader
