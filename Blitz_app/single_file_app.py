@@ -40,7 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Flask 앱 초기화 ---
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super_secret_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///users.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -271,6 +271,29 @@ class BotCommandService:
             db.session.rollback()
             logger.error(f"Failed to update heartbeat for user {user_id}: {e}")
             return False
+    
+    @staticmethod
+    def cleanup_old_commands(days_old: int = 7):
+        """Clean up old completed/failed commands"""
+        try:
+            from datetime import timedelta
+            cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+            old_commands = BotCommand.query.filter(
+                BotCommand.created_at < cutoff_date,
+                BotCommand.status.in_(['completed', 'failed', 'cancelled'])
+            ).all()
+            
+            for command in old_commands:
+                db.session.delete(command)
+            
+            db.session.commit()
+            logger.info(f"Cleaned up {len(old_commands)} old commands")
+            return len(old_commands)
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to cleanup old commands: {e}")
+            return 0
 
 # --- Flask-Admin 뷰 등록 ---
 admin = Admin(app, name="관리자 대시보드", template_mode="bootstrap3")
@@ -1344,16 +1367,52 @@ def admin_page():
     for u in users:
         user_pnl[u.id] = sum(tr['pnl'] for tr in trades if u.api_key in tr.get('symbol', ''))
 
-    # 유저별 봇 상태
+    # 유저별 봇 상태 (new database-driven approach)
     user_statuses = {}
-    for u in users:
-        ev = bot_events.get(u.id)
-        if ev and not ev.is_set():
-            user_statuses[u.id] = '진행 중'
-        else:
-            user_statuses[u.id] = '중지됨'
+    bot_detailed_status = {}
+    
+    if USE_DB_COMMANDS:
+        # Get bot statuses from database
+        all_bot_statuses = BotCommandService.get_all_bot_statuses()
+        for bot_status in all_bot_statuses:
+            user_id = bot_status.user_id
+            if bot_status.status in ['running', 'starting']:
+                user_statuses[user_id] = '진행 중'
+                bot_detailed_status[user_id] = {
+                    'status': bot_status.status,
+                    'pid': bot_status.pid,
+                    'last_heartbeat': bot_status.last_heartbeat,
+                    'last_error': bot_status.last_error
+                }
+            else:
+                user_statuses[user_id] = '중지됨'
+                bot_detailed_status[user_id] = {
+                    'status': bot_status.status,
+                    'last_error': bot_status.last_error
+                }
+        
+        # Set default status for users without bot status records
+        for u in users:
+            if u.id not in user_statuses:
+                user_statuses[u.id] = '중지됨'
+                bot_detailed_status[u.id] = {'status': 'stopped'}
+    else:
+        # Legacy bot status from bot_events
+        for u in users:
+            ev = bot_events.get(u.id)
+            if ev and not ev.is_set():
+                user_statuses[u.id] = '진행 중'
+                bot_detailed_status[u.id] = {'status': 'running (legacy)'}
+            else:
+                user_statuses[u.id] = '중지됨'
+                bot_detailed_status[u.id] = {'status': 'stopped'}
 
-    return render_template('admin.html', users=users, user_pnl=user_pnl, user_statuses=user_statuses)
+    return render_template('admin.html', 
+                         users=users, 
+                         user_pnl=user_pnl, 
+                         user_statuses=user_statuses,
+                         bot_detailed_status=bot_detailed_status,
+                         use_db_commands=USE_DB_COMMANDS)
 
 
 
@@ -1409,7 +1468,188 @@ def ban_user():
         flash("해당 사용자가 없습니다.", 'warning')
     return redirect(url_for('admin_page'))
 
-# --- 비밀번호 확인 페이지 ---
+
+# --- New Admin Control Routes for Database-Driven Architecture ---
+@app.route('/admin/start_user_bot/<int:user_id>', methods=['POST'])
+@login_required
+def admin_start_user_bot(user_id):
+    """Admin can start a bot for any user"""
+    if current_user.email != 'admin@admin.com':
+        flash('접근 권한이 없습니다.', 'danger')
+        return redirect(url_for('index'))
+    
+    if USE_DB_COMMANDS:
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                flash(f'사용자 {user_id}를 찾을 수 없습니다.', 'danger')
+                return redirect(url_for('admin_page'))
+            
+            # Get user config and queue start command
+            command_data = {
+                'user_config': {
+                    'telegram_token': user.telegram_token,
+                    'telegram_chat_id': user.telegram_chat_id,
+                    'api_key': user.api_key,
+                    'api_secret': user.api_secret,
+                    'symbol': user.symbol,
+                    'side': user.side,
+                    'take_profit': user.take_profit,
+                    'stop_loss': user.stop_loss,
+                    'repeat': user.repeat,
+                    'leverage': user.leverage,
+                    'rounds': user.rounds,
+                    'grids': user.grids,
+                }
+            }
+            
+            BotCommandService.queue_command(user_id, 'start', command_data)
+            flash(f'{user.email}의 봇 시작 명령이 대기열에 추가되었습니다.', 'success')
+            
+        except Exception as e:
+            logger.error(f"Admin failed to start bot for user {user_id}: {e}")
+            flash(f'봇 시작 명령 처리 중 오류가 발생했습니다: {e}', 'danger')
+    else:
+        flash('데이터베이스 명령 시스템이 활성화되지 않았습니다.', 'warning')
+    
+    return redirect(url_for('admin_page'))
+
+
+@app.route('/admin/stop_user_bot/<int:user_id>', methods=['POST'])
+@login_required
+def admin_stop_user_bot(user_id):
+    """Admin can stop a bot for any user"""
+    if current_user.email != 'admin@admin.com':
+        flash('접근 권한이 없습니다.', 'danger')
+        return redirect(url_for('index'))
+    
+    if USE_DB_COMMANDS:
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                flash(f'사용자 {user_id}를 찾을 수 없습니다.', 'danger')
+                return redirect(url_for('admin_page'))
+            
+            BotCommandService.queue_command(user_id, 'stop')
+            flash(f'{user.email}의 봇 중지 명령이 대기열에 추가되었습니다.', 'warning')
+            
+        except Exception as e:
+            logger.error(f"Admin failed to stop bot for user {user_id}: {e}")
+            flash(f'봇 중지 명령 처리 중 오류가 발생했습니다: {e}', 'danger')
+    else:
+        flash('데이터베이스 명령 시스템이 활성화되지 않았습니다.', 'warning')
+    
+    return redirect(url_for('admin_page'))
+
+
+@app.route('/admin/restart_user_bot/<int:user_id>', methods=['POST'])
+@login_required
+def admin_restart_user_bot(user_id):
+    """Admin can restart a bot for any user"""
+    if current_user.email != 'admin@admin.com':
+        flash('접근 권한이 없습니다.', 'danger')
+        return redirect(url_for('index'))
+    
+    if USE_DB_COMMANDS:
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                flash(f'사용자 {user_id}를 찾을 수 없습니다.', 'danger')
+                return redirect(url_for('admin_page'))
+            
+            # First stop, then start
+            BotCommandService.queue_command(user_id, 'stop')
+            
+            # Queue start command with slight delay by adding it after stop
+            command_data = {
+                'user_config': {
+                    'telegram_token': user.telegram_token,
+                    'telegram_chat_id': user.telegram_chat_id,
+                    'api_key': user.api_key,
+                    'api_secret': user.api_secret,
+                    'symbol': user.symbol,
+                    'side': user.side,
+                    'take_profit': user.take_profit,
+                    'stop_loss': user.stop_loss,
+                    'repeat': user.repeat,
+                    'leverage': user.leverage,
+                    'rounds': user.rounds,
+                    'grids': user.grids,
+                }
+            }
+            BotCommandService.queue_command(user_id, 'start', command_data)
+            flash(f'{user.email}의 봇 재시작 명령이 대기열에 추가되었습니다.', 'info')
+            
+        except Exception as e:
+            logger.error(f"Admin failed to restart bot for user {user_id}: {e}")
+            flash(f'봇 재시작 명령 처리 중 오류가 발생했습니다: {e}', 'danger')
+    else:
+        flash('데이터베이스 명령 시스템이 활성화되지 않았습니다.', 'warning')
+    
+    return redirect(url_for('admin_page'))
+
+
+@app.route('/admin/bot_status_api')
+@login_required
+def admin_bot_status_api():
+    """API endpoint for getting real-time bot status"""
+    if current_user.email != 'admin@admin.com':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    status_data = []
+    
+    if USE_DB_COMMANDS:
+        all_bot_statuses = BotCommandService.get_all_bot_statuses()
+        for bot_status in all_bot_statuses:
+            user = User.query.get(bot_status.user_id)
+            if user:
+                status_data.append({
+                    'user_id': bot_status.user_id,
+                    'email': user.email,
+                    'status': bot_status.status,
+                    'pid': bot_status.pid,
+                    'last_heartbeat': bot_status.last_heartbeat.isoformat() if bot_status.last_heartbeat else None,
+                    'last_error': bot_status.last_error,
+                    'updated_at': bot_status.updated_at.isoformat() if bot_status.updated_at else None
+                })
+        
+        # Get pending commands
+        pending_commands = BotCommandService.get_pending_commands(limit=50)
+        commands_data = []
+        for cmd in pending_commands:
+            user = User.query.get(cmd.user_id)
+            commands_data.append({
+                'id': cmd.id,
+                'user_id': cmd.user_id,
+                'user_email': user.email if user else 'Unknown',
+                'command_type': cmd.command_type,
+                'status': cmd.status,
+                'created_at': cmd.created_at.isoformat(),
+                'error_message': cmd.error_message
+            })
+        
+        return jsonify({
+            'bot_statuses': status_data,
+            'pending_commands': commands_data,
+            'system': 'database'
+        })
+    else:
+        # Legacy system status
+        for user_id, event in bot_events.items():
+            user = User.query.get(user_id)
+            if user:
+                status_data.append({
+                    'user_id': user_id,
+                    'email': user.email,
+                    'status': 'running' if not event.is_set() else 'stopped',
+                    'system': 'legacy'
+                })
+        
+        return jsonify({
+            'bot_statuses': status_data,
+            'pending_commands': [],
+            'system': 'legacy'
+        })
 @app.route('/profile/verify', methods=['GET','POST'])
 @login_required
 def profile_verify():

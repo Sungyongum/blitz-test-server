@@ -12,11 +12,10 @@ from datetime import datetime, timedelta
 # Add parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from Blitz_app import create_app
-from Blitz_app.extensions import db
-from Blitz_app.models import User
-from Blitz_app.models.bot_command import BotCommand, BotStatus, OrderPersistence
-from Blitz_app.services.bot_command_service import BotCommandService
+from Blitz_app.single_file_app import app
+# Import models from single_file_app since they're integrated there
+import Blitz_app.single_file_app as app_module
+from Blitz_app.single_file_app import BotCommand, BotStatus, OrderPersistence, BotCommandService
 from Blitz_app.bot import run_bot
 from threading import Event
 
@@ -37,7 +36,7 @@ class BotWorker:
     
     def __init__(self, user_id: int):
         self.user_id = user_id
-        self.app = create_app()
+        self.app = app  # Use the app from single_file_app
         self.stop_event = Event()
         self.bot_thread = None
         self.current_config = None
@@ -77,6 +76,7 @@ class BotWorker:
         """Get user configuration from database"""
         with self.app.app_context():
             try:
+                User = app_module.User  # Get User from single_file_app
                 user = User.query.get(self.user_id)
                 if not user:
                     raise ValueError(f"User {self.user_id} not found")
@@ -127,6 +127,7 @@ class BotWorker:
             
             # Start bot in separate thread using existing bot logic
             import threading
+            from Blitz_app.bot import run_bot
             self.bot_thread = threading.Thread(
                 target=run_bot,
                 args=(user_config, self.stop_event, self.user_id),

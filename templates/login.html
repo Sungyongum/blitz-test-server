@@ -75,11 +75,11 @@
     </form>
 
     <div class="mt-3">
-      <a href="{{ url_for('main.forgot_password') }}">비밀번호 재설정</a>
-      <a href="{{ url_for('main.register') }}">회원가입</a>
+      <a href="{{ url_for('forgot_password') }}">비밀번호 재설정</a>
+      <a href="{{ url_for('register') }}">회원가입</a>
     </div>
 
-  {% if request.endpoint != 'main.login' %}
+  {% if request.endpoint != 'login' %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flashes">

@@ -14,11 +14,9 @@ from threading import Thread, Event
 # Add parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from Blitz_app import create_app
-from Blitz_app.extensions import db
-from Blitz_app.models import User
-from Blitz_app.models.bot_command import BotCommand, BotStatus, OrderPersistence
-from Blitz_app.services.bot_command_service import BotCommandService
+# Import from single_file_app since models are integrated there
+import Blitz_app.single_file_app as app_module
+from Blitz_app.single_file_app import app, BotCommand, BotStatus, OrderPersistence, BotCommandService
 
 # Setup logging
 logging.basicConfig(
@@ -36,7 +34,7 @@ class BotManager:
     """Manager for supervising individual user bot processes"""
     
     def __init__(self):
-        self.app = create_app()
+        self.app = app  # Use the app from single_file_app
         self.stop_event = Event()
         self.bot_processes = {}  # user_id -> subprocess.Popen
         self.monitor_thread = None
@@ -54,6 +52,7 @@ class BotManager:
         """Get list of users that should have active bots"""
         with self.app.app_context():
             try:
+                db = app_module.db  # Get db from single_file_app
                 # Get users with pending start commands or running bots
                 users_with_commands = db.session.query(BotCommand.user_id).filter(
                     BotCommand.status == 'pending',
