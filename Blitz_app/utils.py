@@ -1,10 +1,17 @@
 import ccxt
 import math
 import time, random
+from flask_login import current_user
 from Blitz_app.models import Proxy
 from Blitz_app import db
 from Blitz_app.models.proxy_status_log import ProxyStatusLog
 from Blitz_app.models.user import User
+
+def is_admin():
+    """Check if current user is admin"""
+    return (current_user.is_authenticated and 
+            (getattr(current_user, "is_admin", False) or 
+             current_user.email == "admin@admin.com"))
 
 def _to_bool(x):
     if isinstance(x, bool):

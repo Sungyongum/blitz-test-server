@@ -13,6 +13,7 @@ from .utils import (
 from .trade_log import record_trade
 from .bot_state import bot_events, force_refresh_flags, single_refresh_flags
 from .bot_state import repeat_overrides
+from .bot_command_processor import BotCommandProcessor
 from Blitz_app.models import Proxy
 from Blitz_app import db
 
@@ -498,11 +499,49 @@ def run_bot(config, stop_event: Event, user_id: int, exchange_name='bybit'):
                 except Exception as e:
                     logging.warning(f"[ensure_tp_exists @startup] {e}")
 
-
+                # ✅ 명령 처리기 초기화
+                bot_instance_id = f"bot_{user_id}_{int(time.time())}"
+                command_processor = BotCommandProcessor(user_id, bot_instance_id)
+                
+                # 봇 컨텍스트 (명령 실행에 필요한 정보)
+                bot_context = {
+                    'exchange': exchange,
+                    'symbol': symbol,
+                    'side': side,
+                    'user_id': user_id,
+                    'restart_requested': False,
+                    'stop_requested': False
+                }
+                
+                last_heartbeat_time = 0
+                heartbeat_interval = 30  # 30초마다 heartbeat 업데이트
 
                 # 9) 메인 루프
                 while not stop_event.is_set():
                     try:
+                        # ✅ (0) 명령 처리 및 heartbeat 업데이트
+                        current_time = time.time()
+                        if current_time - last_heartbeat_time > heartbeat_interval:
+                            command_processor.update_heartbeat()
+                            last_heartbeat_time = current_time
+                        
+                        # 명령 처리
+                        command_processor.process_commands(bot_context)
+                        
+                        # 봇 중지 요청 확인
+                        if bot_context.get('stop_requested'):
+                            logging.info("Bot stop requested via command")
+                            status = "명령에 의한 중지"
+                            stop_event.set()
+                            break
+                        
+                        # 봇 재시작 요청 확인
+                        if bot_context.get('restart_requested'):
+                            logging.info("Bot restart requested via command")
+                            status = "명령에 의한 재시작"
+                            # 현재 루프를 종료하고 외부 retry 로직이 재시작하도록
+                            raise Exception("Bot restart requested")
+                        
                         # (A) 버튼/오버라이드 처리
                         fr = force_refresh_flags.get(user_id, False)
                         sr = single_refresh_flags.get(user_id, False)

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blitz Bot 관리자 - 다중 봇 관리</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #1a1a1a;
+      --bg-panel: #222;
+      --border-color: #333;
+      --text-primary: #e0e0e0;
+      --text-secondary: #b0b0b0;
+      --accent-primary: #4dabf7;
+      --accent-success: #51cf66;
+      --accent-warning: #ffd43b;
+      --accent-danger: #ff6b6b;
+    }
+    
+    body { 
+      background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1a2e 100%);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .container { max-width: 98%; margin-top: 20px; }
+    
+    .panel { 
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    
+    .panel h5 {
+      color: var(--accent-primary);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    
+    /* Enhanced table styling */
+    .table-dark {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .table-dark th {
+      background: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--accent-primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .table-dark td {
+      border-color: var(--border-color);
+      vertical-align: middle;
+      padding: 12px 8px;
+    }
+    
+    /* Bot status indicators */
+    .bot-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .bot-status.running { background: rgba(81, 207, 102, 0.2); color: var(--accent-success); }
+    .bot-status.stopped { background: rgba(108, 117, 125, 0.2); color: var(--text-secondary); }
+    .bot-status.degraded { background: rgba(255, 212, 59, 0.2); color: var(--accent-warning); }
+    .bot-status.error { background: rgba(255, 107, 107, 0.2); color: var(--accent-danger); }
+    
+    /* Enhanced buttons */
+    .btn {
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .btn-group-vertical .btn {
+      margin-bottom: 2px;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+    }
+    
+    /* Control buttons */
+    .control-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .control-buttons .btn {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      min-width: 100px;
+    }
+    
+    /* Health widget */
+    .health-widget {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .health-widget .metric {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    
+    .health-widget .metric-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      display: block;
+    }
+    
+    .health-widget .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    /* Search and filter */
+    .search-controls {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    /* Toast notifications */
+    .toast {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    
+    /* Progress indicators */
+    .progress {
+      background: var(--bg-primary);
+      height: 4px;
+    }
+    
+    /* Form controls */
+    .form-control:focus, .form-select:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 0.2rem rgba(77, 171, 247, 0.25);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+      .container { max-width: 100%; margin-top: 10px; }
+      .panel { padding: 16px; }
+      .table-responsive { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-robot"></i> Blitz Bot Manager</h2>
+    <div class="d-flex gap-2">
+      <a href="/admin_enhanced" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-house"></i> 대시보드
+      </a>
+      <a href="/pnl_dashboard" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-graph-up"></i> PnL 대시보드
+      </a>
+    </div>
+  </div>
+
+  <!-- Health Widget -->
+  <div class="health-widget">
+    <div class="row">
+      <div class="col-md-3">
+        <div class="metric">
+          <span class="metric-value text-success" id="running-bots">0</span>
+          <div class="metric-label">실행 중</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric">
+          <span class="metric-value text-warning" id="total-bots">0</span>
+          <div class="metric-label">총 봇</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric">
+          <span class="metric-value text-info" id="pending-commands">0</span>
+          <div class="metric-label">대기 명령</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric">
+          <span class="metric-value text-danger" id="error-count">0</span>
+          <div class="metric-label">오류</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter -->
+  <div class="search-controls">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="searchInput" placeholder="이메일 또는 사용자 ID로 검색...">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select" id="statusFilter">
+          <option value="">모든 상태</option>
+          <option value="running">실행 중</option>
+          <option value="stopped">중지됨</option>
+          <option value="degraded">성능 저하</option>
+          <option value="error">오류</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" onclick="refreshData()">
+          <i class="bi bi-arrow-clockwise"></i> 새로고침
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Management Panel -->
+  <div class="panel">
+    <h5><i class="bi bi-people"></i> 사용자 봇 관리</h5>
+    <div class="table-responsive">
+      <table class="table table-dark table-hover table-sm" id="usersTable">
+        <thead>
+          <tr>
+            <th>사용자</th>
+            <th>봇 상태</th>
+            <th>설정</th>
+            <th>PnL</th>
+            <th>봇 제어</th>
+            <th>주문 관리</th>
+            <th>고급 작업</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Dynamic content will be loaded here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+<!-- Command Progress Modal -->
+<div class="modal fade" id="commandModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h5 class="modal-title">명령 실행 중...</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="progress mb-3">
+          <div class="progress-bar progress-bar-animated" style="width: 0%"></div>
+        </div>
+        <div id="commandStatus">명령을 전송하고 있습니다...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentUsers = [];
+let healthData = {};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    refreshData();
+    setInterval(refreshData, 30000); // Refresh every 30 seconds
+    
+    // Setup search and filter
+    document.getElementById('searchInput').addEventListener('input', filterUsers);
+    document.getElementById('statusFilter').addEventListener('change', filterUsers);
+});
+
+async function refreshData() {
+    try {
+        // Get admin health data
+        const healthResponse = await fetch('/api/admin/health');
+        if (healthResponse.ok) {
+            healthData = await healthResponse.json();
+            updateHealthWidget();
+        }
+        
+        // Get users data
+        const usersResponse = await fetch('/api/admin/users');
+        if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            currentUsers = usersData.users;
+            renderUsers();
+        }
+    } catch (error) {
+        console.error('Failed to refresh data:', error);
+        showToast('데이터 새로고침 실패', 'danger');
+    }
+}
+
+function updateHealthWidget() {
+    document.getElementById('running-bots').textContent = healthData.running_bots || 0;
+    document.getElementById('total-bots').textContent = healthData.total_bots || 0;
+    document.getElementById('pending-commands').textContent = healthData.pending_commands || 0;
+    document.getElementById('error-count').textContent = (healthData.recent_errors || []).length;
+}
+
+function renderUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+    
+    currentUsers.forEach(user => {
+        const row = createUserRow(user);
+        tbody.appendChild(row);
+        
+        // Load PnL data for this user
+        loadUserPnL(user.id);
+    });
+}
+
+function createUserRow(user) {
+    const tr = document.createElement('tr');
+    tr.dataset.userId = user.id;
+    tr.dataset.email = user.email.toLowerCase();
+    tr.dataset.status = user.bot_status;
+    
+    const botStatusClass = getBotStatusClass(user.bot_status);
+    const botStatusIcon = getBotStatusIcon(user.bot_status);
+    
+    tr.innerHTML = `
+        <td>
+            <div class="fw-bold">${user.email}</div>
+            <small class="text-muted">ID: ${user.id}</small>
+        </td>
+        <td>
+            <div class="bot-status ${botStatusClass}">
+                <i class="bi ${botStatusIcon}"></i>
+                ${user.bot_status}
+            </div>
+            ${user.bot_pid ? `<small class="text-muted d-block">PID: ${user.bot_pid}</small>` : ''}
+        </td>
+        <td>
+            <div class="small">
+                <div>${user.symbol} ${user.side.toUpperCase()}</div>
+                <div>레버리지: ${user.leverage}x</div>
+                <div>라운드: ${user.rounds}</div>
+            </div>
+        </td>
+        <td>
+            <div class="fw-bold pnl-value" data-user-id="${user.id}">Loading...</div>
+            <small class="text-muted win-rate" data-user-id="${user.id}">-</small>
+        </td>
+        <td>
+            <div class="control-buttons">
+                <button class="btn btn-success btn-sm" onclick="executeCommand(${user.id}, 'start_bot')">
+                    <i class="bi bi-play-fill"></i> 시작
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="executeCommand(${user.id}, 'restart_bot')">
+                    <i class="bi bi-arrow-clockwise"></i> 재시작
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="executeCommand(${user.id}, 'stop_bot')">
+                    <i class="bi bi-stop-fill"></i> 중지
+                </button>
+            </div>
+        </td>
+        <td>
+            <div class="control-buttons">
+                <button class="btn btn-info btn-sm" onclick="executeCommand(${user.id}, 'recover_orders')">
+                    <i class="bi bi-arrow-repeat"></i> 주문 복구
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="executeCommand(${user.id}, 'resync_tp')">
+                    <i class="bi bi-bullseye"></i> TP 재설정
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="executeCommand(${user.id}, 'cancel_all')">
+                    <i class="bi bi-x-circle"></i> 전체 취소
+                </button>
+            </div>
+        </td>
+        <td>
+            <div class="control-buttons">
+                <button class="btn btn-outline-warning btn-sm" onclick="executeCommand(${user.id}, 'force_close')">
+                    <i class="bi bi-exclamation-triangle"></i> 강제 청산
+                </button>
+                <button class="btn btn-outline-info btn-sm" onclick="executeCommand(${user.id}, 'unlock')">
+                    <i class="bi bi-unlock"></i> 잠금 해제
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="executeCommand(${user.id}, 'reset_plan')">
+                    <i class="bi bi-arrow-counterclockwise"></i> 계획 초기화
+                </button>
+            </div>
+        </td>
+    `;
+    
+    return tr;
+}
+
+function getBotStatusClass(status) {
+    switch(status) {
+        case 'running': return 'running';
+        case 'stopped': return 'stopped';
+        case 'degraded': return 'degraded';
+        default: return 'error';
+    }
+}
+
+function getBotStatusIcon(status) {
+    switch(status) {
+        case 'running': return 'bi-play-circle-fill';
+        case 'stopped': return 'bi-stop-circle';
+        case 'degraded': return 'bi-exclamation-triangle-fill';
+        default: return 'bi-x-circle-fill';
+    }
+}
+
+function filterUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    const rows = document.querySelectorAll('#usersTableBody tr');
+    rows.forEach(row => {
+        const email = row.dataset.email;
+        const userId = row.dataset.userId;
+        const status = row.dataset.status;
+        
+        const matchesSearch = !searchTerm || 
+            email.includes(searchTerm) || 
+            userId.includes(searchTerm);
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+    });
+}
+
+async function executeCommand(userId, commandType, payload = {}) {
+    const modal = new bootstrap.Modal(document.getElementById('commandModal'));
+    modal.show();
+    
+    try {
+        updateCommandProgress(0, `${commandType} 명령을 전송하고 있습니다...`);
+        
+        const response = await fetch(`/api/users/${userId}/commands/${commandType}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            updateCommandProgress(50, '명령이 큐에 추가되었습니다. 실행 대기 중...');
+            
+            // Poll for command completion
+            const commandId = result.command_id;
+            await pollCommandStatus(userId, commandId);
+            
+            showToast(`${commandType} 명령이 성공적으로 실행되었습니다.`, 'success');
+            refreshData(); // Refresh the data
+        } else {
+            throw new Error(result.error || '명령 실행 실패');
+        }
+    } catch (error) {
+        console.error('Command execution failed:', error);
+        showToast(`명령 실행 실패: ${error.message}`, 'danger');
+        updateCommandProgress(100, `오류: ${error.message}`);
+        setTimeout(() => modal.hide(), 2000);
+    }
+}
+
+async function pollCommandStatus(userId, commandId) {
+    const maxPolls = 30; // 30 attempts = 30 seconds
+    let polls = 0;
+    
+    while (polls < maxPolls) {
+        try {
+            const response = await fetch(`/api/users/${userId}/commands/${commandId}/status`);
+            const status = await response.json();
+            
+            if (status.status === 'done') {
+                updateCommandProgress(100, '명령이 성공적으로 완료되었습니다.');
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('commandModal'));
+                    modal.hide();
+                }, 1000);
+                return;
+            } else if (status.status === 'failed') {
+                throw new Error(status.error_message || '명령 실행 실패');
+            } else if (status.status === 'picked') {
+                updateCommandProgress(75, '봇이 명령을 처리하고 있습니다...');
+            }
+            
+            polls++;
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        } catch (error) {
+            throw error;
+        }
+    }
+    
+    // Timeout
+    updateCommandProgress(100, '명령 상태 확인 시간 초과. 백그라운드에서 계속 처리됩니다.');
+    setTimeout(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('commandModal'));
+        modal.hide();
+    }, 2000);
+}
+
+function updateCommandProgress(percent, message) {
+    const progressBar = document.querySelector('#commandModal .progress-bar');
+    const statusDiv = document.getElementById('commandStatus');
+    
+    progressBar.style.width = percent + '%';
+    statusDiv.textContent = message;
+}
+
+async function loadUserPnL(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/pnl/summary`);
+        if (response.ok) {
+            const pnlData = await response.json();
+            
+            const pnlElement = document.querySelector(`.pnl-value[data-user-id="${userId}"]`);
+            const winRateElement = document.querySelector(`.win-rate[data-user-id="${userId}"]`);
+            
+            if (pnlElement) {
+                const pnl = pnlData.total_pnl || 0;
+                const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger';
+                const pnlSign = pnl >= 0 ? '+' : '';
+                pnlElement.innerHTML = `<span class="${pnlClass}">${pnlSign}${pnl.toFixed(2)} USDT</span>`;
+            }
+            
+            if (winRateElement) {
+                const winRate = pnlData.overall_win_rate || 0;
+                const totalTrades = pnlData.total_trades || 0;
+                winRateElement.textContent = `승률: ${winRate.toFixed(1)}% (${totalTrades}거래)`;
+            }
+        }
+    } catch (error) {
+        console.error(`Failed to load PnL for user ${userId}:`, error);
+        
+        const pnlElement = document.querySelector(`.pnl-value[data-user-id="${userId}"]`);
+        if (pnlElement) {
+            pnlElement.innerHTML = '<span class="text-muted">오류</span>';
+        }
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = 'toast-' + Date.now();
+    
+    const toastHtml = `
+        <div class="toast" id="${toastId}" role="alert">
+            <div class="toast-header">
+                <div class="rounded me-2 bg-${type}" style="width: 12px; height: 12px;"></div>
+                <strong class="me-auto">알림</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">${message}</div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+    toast.show();
+    
+    // Remove toast element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+</body>
+</html>
