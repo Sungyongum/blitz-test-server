@@ -7,6 +7,7 @@ import json
 import logging
 import signal
 import subprocess
+import stat
 from datetime import datetime, timedelta
 from threading import Thread, Event
 from typing import Dict, Optional
@@ -45,6 +46,63 @@ class BotManager:
         self.admin_telegram_token = None
         self.admin_chat_id = None
         self._load_admin_config()
+        
+        # Bot runner configuration
+        self.bot_runner_dir = self._init_bot_runner_dir()
+        self.python_executable = self._init_python_executable()
+        
+    def _init_bot_runner_dir(self) -> str:
+        """Initialize and return the bot runner directory path"""
+        # Get configured directory or use default
+        default_dir = os.path.join(os.getcwd(), 'runtime', 'bot_runners')
+        configured_dir = os.environ.get('BOT_RUNNER_DIR', default_dir)
+        
+        # Try to create the directory with proper permissions
+        try:
+            os.makedirs(configured_dir, mode=0o770, exist_ok=True)
+            
+            # Test write access
+            test_file = os.path.join(configured_dir, '.write_test')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.unlink(test_file)
+            
+            logger.info(f"Bot runner directory initialized: {configured_dir}")
+            return configured_dir
+            
+        except (OSError, IOError) as e:
+            # Fallback to project-local directory
+            fallback_dir = os.path.join(os.getcwd(), 'runtime', 'bot_runners')
+            logger.warning(f"Failed to use configured bot runner directory {configured_dir}: {e}")
+            logger.info(f"Falling back to project-local directory: {fallback_dir}")
+            
+            try:
+                os.makedirs(fallback_dir, mode=0o770, exist_ok=True)
+                return fallback_dir
+            except (OSError, IOError) as fallback_e:
+                logger.error(f"Failed to create fallback bot runner directory {fallback_dir}: {fallback_e}")
+                raise RuntimeError(f"Cannot create bot runner directory. Configured: {configured_dir}, Fallback: {fallback_dir}")
+    
+    def _init_python_executable(self) -> str:
+        """Initialize and return the Python executable path"""
+        # Check for configured Python executable
+        configured_python = os.environ.get('BLITZ_PYTHON')
+        if configured_python:
+            if os.path.isfile(configured_python) and os.access(configured_python, os.X_OK):
+                logger.info(f"Using configured Python executable: {configured_python}")
+                return configured_python
+            else:
+                logger.warning(f"Configured BLITZ_PYTHON not found or not executable: {configured_python}")
+        
+        # Try project virtual environment
+        venv_python = os.path.join(os.getcwd(), '.venv', 'bin', 'python')
+        if os.path.isfile(venv_python) and os.access(venv_python, os.X_OK):
+            logger.info(f"Using project virtual environment Python: {venv_python}")
+            return venv_python
+        
+        # Fallback to current Python executable
+        logger.info(f"Using current Python executable: {sys.executable}")
+        return sys.executable
         
     def _load_admin_config(self):
         """Load admin telegram config for alerts"""
@@ -129,8 +187,12 @@ class BotManager:
                     logger.error(f"User {user_id} not found")
                     return False
                 
-                # Create bot startup script
-                script_path = f"/tmp/bot_runner_{user_id}.py"
+                # Create bot startup script in configured directory
+                script_filename = f"bot_runner_{user_id}.py"
+                script_path = os.path.join(self.bot_runner_dir, script_filename)
+                
+                logger.info(f"Creating bot runner script for user {user_id}: {script_path}")
+                
                 with open(script_path, 'w') as f:
                     f.write(f"""
 import sys
@@ -163,10 +225,26 @@ with app.app_context():
         sys.exit(1)
 """)
                 
-                # Start the process
-                proc = subprocess.Popen([
-                    sys.executable, script_path
-                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                # Set proper file permissions (readable by owner/group)
+                os.chmod(script_path, 0o640)
+                
+                # Log file creation details
+                file_stat = os.stat(script_path)
+                logger.info(f"Bot runner script created - Size: {file_stat.st_size} bytes, Mode: {oct(file_stat.st_mode)}")
+                
+                # Start the process using Python interpreter explicitly
+                # This avoids needing execute permission on the script itself
+                cmd = [self.python_executable, '-u', script_path]
+                
+                logger.info(f"Starting bot process for user {user_id} with command: {' '.join(cmd)}")
+                
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE,
+                    cwd=os.getcwd(),
+                    env=os.environ.copy()
+                )
                 
                 # Update database
                 bot_info = UserBot.query.get(user_id)
@@ -184,15 +262,22 @@ with app.app_context():
                 event = BotEvent(
                     user_id=user_id,
                     type='bot_started',
-                    payload=json.dumps({'pid': proc.pid, 'restart_count': bot_info.restart_count})
+                    payload=json.dumps({
+                        'pid': proc.pid, 
+                        'restart_count': bot_info.restart_count,
+                        'script_path': script_path,
+                        'python_executable': self.python_executable
+                    })
                 )
                 db.session.add(event)
                 db.session.commit()
                 
                 self._log_structured(
                     'info', 'bot_started', user_id,
-                    f"Bot process started with PID {proc.pid}",
-                    f"Monitor process health via PID {proc.pid}"
+                    f"Bot process started with PID {proc.pid} using {self.python_executable}",
+                    f"Monitor process health via PID {proc.pid}",
+                    script_path=script_path,
+                    python_executable=self.python_executable
                 )
                 
                 self._send_admin_alert(f"🚀 Bot started for user {user_id} (PID: {proc.pid})", user_id)
@@ -200,10 +285,37 @@ with app.app_context():
                 return True
                 
         except Exception as e:
+            # Enhanced error logging with file system diagnostics
+            error_details = {
+                'error': str(e),
+                'bot_runner_dir': self.bot_runner_dir,
+                'python_executable': self.python_executable
+            }
+            
+            # Add file system diagnostics if possible
+            try:
+                if os.path.exists(self.bot_runner_dir):
+                    dir_stat = os.stat(self.bot_runner_dir)
+                    error_details['dir_permissions'] = oct(dir_stat.st_mode)
+                    error_details['dir_owner'] = f"{dir_stat.st_uid}:{dir_stat.st_gid}"
+                else:
+                    error_details['dir_exists'] = False
+                    
+                # Check mount options if available (Linux)
+                if os.path.exists('/proc/mounts'):
+                    with open('/proc/mounts', 'r') as f:
+                        for line in f:
+                            if self.bot_runner_dir.startswith(line.split()[1]):
+                                error_details['mount_options'] = line.split()[3]
+                                break
+            except Exception as diag_e:
+                error_details['diagnostics_error'] = str(diag_e)
+            
             self._log_structured(
                 'error', 'bot_start_failed', user_id,
                 f"Failed to start bot process: {e}",
-                "Check user configuration and system resources"
+                "Check bot runner directory permissions and Python executable access",
+                **error_details
             )
             self._send_admin_alert(f"❌ Failed to start bot for user {user_id}: {e}", user_id)
             return False
@@ -245,6 +357,16 @@ with app.app_context():
                 )
                 db.session.add(event)
                 db.session.commit()
+            
+            # Clean up the runner script file
+            script_filename = f"bot_runner_{user_id}.py"
+            script_path = os.path.join(self.bot_runner_dir, script_filename)
+            try:
+                if os.path.exists(script_path):
+                    os.unlink(script_path)
+                    logger.info(f"Cleaned up runner script: {script_path}")
+            except OSError as e:
+                logger.warning(f"Failed to clean up runner script {script_path}: {e}")
             
             self._log_structured(
                 'info', 'bot_stopped', user_id,
@@ -340,6 +462,36 @@ with app.app_context():
         except Exception as e:
             logger.error(f"Error setting restart backoff for user {user_id}: {e}")
     
+    def _cleanup_stale_runner_scripts(self):
+        """Clean up stale bot runner scripts for users that are no longer running"""
+        try:
+            if not os.path.exists(self.bot_runner_dir):
+                return
+                
+            # Get currently active users
+            active_users = set(self._get_active_users())
+            currently_running = set(self.managed_bots.keys())
+            
+            # Clean up scripts for users no longer running
+            for filename in os.listdir(self.bot_runner_dir):
+                if filename.startswith('bot_runner_') and filename.endswith('.py'):
+                    try:
+                        # Extract user_id from filename
+                        user_id_str = filename[11:-3]  # Remove 'bot_runner_' and '.py'
+                        user_id = int(user_id_str)
+                        
+                        # Remove if user is not active and not currently managed
+                        if user_id not in active_users and user_id not in currently_running:
+                            script_path = os.path.join(self.bot_runner_dir, filename)
+                            os.unlink(script_path)
+                            logger.info(f"Cleaned up stale runner script: {script_path}")
+                            
+                    except (ValueError, OSError) as e:
+                        logger.warning(f"Error cleaning up runner script {filename}: {e}")
+                        
+        except Exception as e:
+            logger.error(f"Error during runner script cleanup: {e}")
+    
     def _manage_user_bot(self, user_id: int, should_run: bool):
         """Manage individual user bot (start/stop/restart as needed)"""
         bot_info = self._get_bot_process_info(user_id)
@@ -387,7 +539,12 @@ with app.app_context():
     def run(self):
         """Main bot manager loop"""
         logger.info("🎯 Bot Manager starting up")
+        logger.info(f"Bot runner directory: {self.bot_runner_dir}")
+        logger.info(f"Python executable: {self.python_executable}")
         self._send_admin_alert("🎯 Bot Manager started")
+        
+        cleanup_counter = 0
+        cleanup_interval = 10  # Run cleanup every 10 cycles (5 minutes with 30s intervals)
         
         while not self.stop_event.is_set():
             try:
@@ -410,6 +567,12 @@ with app.app_context():
                     self._manage_user_bot(user_id, True)
                     self.managed_bots[user_id] = {'last_checked': time.time()}
                 
+                # Periodic cleanup of stale runner scripts
+                cleanup_counter += 1
+                if cleanup_counter >= cleanup_interval:
+                    self._cleanup_stale_runner_scripts()
+                    cleanup_counter = 0
+                
                 # Wait before next check
                 time.sleep(self.health_check_interval)
                 
@@ -424,6 +587,9 @@ with app.app_context():
         # Stop all managed bots
         for user_id in list(self.managed_bots.keys()):
             self._stop_bot_process(user_id)
+        
+        # Final cleanup of runner scripts
+        self._cleanup_stale_runner_scripts()
     
     def stop(self):
         """Stop the bot manager"""
