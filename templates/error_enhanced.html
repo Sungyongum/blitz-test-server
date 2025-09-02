@@ -1,0 +1,134 @@
+<!-- templates/error_enhanced.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ error_code }} - {{ error_message }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header bg-{% if error_code == 429 %}warning{% elif error_code == 503 %}info{% else %}danger{% endif %} text-white">
+        <h4 class="mb-0">
+          {% if error_code == 429 %}
+            ⏱️ Rate Limit Exceeded
+          {% elif error_code == 503 %}
+            🔧 Service Unavailable  
+          {% elif error_code == 404 %}
+            🔍 Page Not Found
+          {% else %}
+            ❌ Error {{ error_code }}
+          {% endif %}
+        </h4>
+      </div>
+      
+      <div class="card-body">
+        <p class="lead">{{ error_message }}</p>
+        
+        {% if error_code == 429 %}
+          <div class="alert alert-warning">
+            <strong>What happened?</strong><br>
+            You've made too many requests in a short time period. This helps protect the service for all users.
+            
+            {% if retry_after %}
+            <br><br>
+            <strong>When can I try again?</strong><br>
+            Please wait {{ retry_after }} seconds before making another request.
+            
+            <div class="progress mt-2">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                   role="progressbar" style="width: 100%" id="retry-progress">
+              </div>
+            </div>
+            <small class="text-muted">Time remaining: <span id="countdown">{{ retry_after }}</span> seconds</small>
+            {% endif %}
+          </div>
+        {% elif error_code == 503 %}
+          <div class="alert alert-info">
+            <strong>What happened?</strong><br>
+            The service is temporarily unavailable, likely due to maintenance or high load.
+            
+            <br><br>
+            <strong>What can I do?</strong><br>
+            • Try refreshing the page in a few moments<br>
+            • Check the system status banner above<br>
+            • Contact support if the issue persists
+          </div>
+        {% elif error_code == 404 %}
+          <div class="alert alert-light">
+            <strong>What happened?</strong><br>
+            The page you're looking for doesn't exist or has been moved.
+            
+            <br><br>
+            <strong>What can I do?</strong><br>
+            • Check the URL for typos<br>
+            • Go back to the <a href="{{ url_for('main.index') }}">homepage</a><br>
+            • Use the navigation menu
+          </div>
+        {% else %}
+          <div class="alert alert-danger">
+            <strong>What happened?</strong><br>
+            An unexpected error occurred on our end.
+            
+            <br><br>
+            <strong>What can I do?</strong><br>
+            • Try refreshing the page<br>
+            • Go back and try again<br>
+            • Contact support if the problem continues
+            
+            {% if request_id %}
+            <br><br>
+            <small class="text-muted">Error ID: {{ request_id }}</small>
+            {% endif %}
+          </div>
+        {% endif %}
+        
+        <div class="mt-4">
+          <button onclick="window.history.back()" class="btn btn-secondary">
+            ← Go Back
+          </button>
+          <a href="{{ url_for('main.index') }}" class="btn btn-primary ml-2">
+            🏠 Home
+          </a>
+          {% if error_code == 429 %}
+          <button id="retry-btn" class="btn btn-success ml-2" disabled>
+            🔄 Retry Now
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if error_code == 429 and retry_after %}
+<script>
+  let countdown = {{ retry_after }};
+  const countdownElement = document.getElementById('countdown');
+  const retryBtn = document.getElementById('retry-btn');
+  const progressBar = document.getElementById('retry-progress');
+  
+  const timer = setInterval(() => {
+    countdown--;
+    countdownElement.textContent = countdown;
+    
+    // Update progress bar
+    const percentage = (({{ retry_after }} - countdown) / {{ retry_after }}) * 100;
+    progressBar.style.width = percentage + '%';
+    
+    if (countdown <= 0) {
+      clearInterval(timer);
+      countdownElement.textContent = '0';
+      progressBar.style.width = '100%';
+      progressBar.classList.remove('progress-bar-animated');
+      progressBar.classList.add('bg-success');
+      
+      retryBtn.disabled = false;
+      retryBtn.innerHTML = '🔄 Retry Now';
+      retryBtn.onclick = () => window.location.reload();
+    }
+  }, 1000);
+</script>
+{% endif %}
+{% endblock %}

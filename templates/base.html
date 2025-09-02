@@ -5,10 +5,136 @@
   <meta charset="UTF-8">
   <title>{% block title %}Blitz Trade Bot{% endblock %}</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <style>
+    .maintenance-banner {
+      background-color: #ffc107;
+      color: #212529;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .broadcast-banner {
+      background-color: #17a2b8;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .error-429 {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .error-503 {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+  </style>
 </head>
 <body>
+  <!-- Maintenance Mode Banner -->
+  {% if maintenance_enabled %}
+  <div class="maintenance-banner">
+    ⚠️ System is currently in maintenance mode. Some features may be limited.
+  </div>
+  {% endif %}
+  
+  <!-- Global Broadcast Banner -->
+  {% if banner_message %}
+  <div class="broadcast-banner">
+    📢 {{ banner_message }}
+  </div>
+  {% endif %}
+  
   <div class="container mt-4">
+    <!-- Flash messages with enhanced styling -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% elif category == 'warning' %}
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% elif category == 'success' %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% else %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
     {% block content %}{% endblock %}
   </div>
+  
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+  
+  <!-- Error handling for AJAX requests -->
+  <script>
+    // Global error handler for rate limiting and maintenance
+    $(document).ajaxError(function(event, xhr, settings) {
+      if (xhr.status === 429) {
+        const retryAfter = xhr.getResponseHeader('Retry-After') || 60;
+        showError(`Too many requests. Please wait ${retryAfter} seconds before trying again.`, 'error-429');
+      } else if (xhr.status === 503) {
+        showError('Service temporarily unavailable. The system may be in maintenance mode.', 'error-503');
+      } else if (xhr.status >= 500) {
+        showError('Server error occurred. Please try again later.', 'error');
+      }
+    });
+    
+    function showError(message, cssClass = 'alert-danger') {
+      const errorDiv = $(`<div class="alert ${cssClass} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>`);
+      
+      $('.container').prepend(errorDiv);
+      
+      // Auto-dismiss after 10 seconds
+      setTimeout(() => {
+        errorDiv.alert('close');
+      }, 10000);
+    }
+    
+    // Show retry guidance for failed requests
+    function showRetryGuidance(seconds) {
+      showError(`Request failed. Please wait ${seconds} seconds before retrying.`, 'error-429');
+    }
+  </script>
+  
+  {% block scripts %}{% endblock %}
 </body>
 </html>
