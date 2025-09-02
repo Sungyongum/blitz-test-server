@@ -122,24 +122,48 @@ chmod 755 instance/
 
 ## Step 5: Initial User Setup
 
-### Create Admin User
+### Admin User Auto-Creation
+
+**The admin user is automatically created when the application starts for the first time.**
+
+**Default Credentials:**
+- Email: `admin@admin.com`
+- Password: `djatjddyd86`
+
+**⚠️ IMPORTANT: Change the default password immediately after first login!**
+
+#### Customizing Admin Credentials
+
+You can override the default admin credentials using environment variables:
+
+```bash
+# Set custom admin credentials in .env file
+echo "ADMIN_EMAIL=your-admin@example.com" >> .env
+echo "ADMIN_PASSWORD=your-secure-password" >> .env
+```
+
+Or set them when starting the application:
+```bash
+ADMIN_EMAIL=your-admin@example.com ADMIN_PASSWORD=your-secure-password python run.py
+```
+
+#### Verify Admin Creation
+
+To verify the admin user was created correctly:
 ```bash
 python -c "
 from Blitz_app import create_app
 from Blitz_app.models import User
-from Blitz_app.extensions import db
 
 app = create_app()
 with app.app_context():
-    # Check if admin exists
     admin = User.query.filter_by(email='admin@admin.com').first()
-    if not admin:
-        print('Admin user already exists')
+    if admin:
+        print('✅ Admin user exists')
+        print(f'   Email: {admin.email}')
+        print('   Password: [configured during creation]')
     else:
-        print('✅ Admin user created during app initialization')
-        print('   Email: admin@admin.com')
-        print('   Password: djatjddyd86')
-        print('   ⚠️  Change this password immediately!')
+        print('❌ Admin user not found')
 "
 ```
 

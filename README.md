@@ -144,7 +144,19 @@ WEB_HOST=0.0.0.0
 WEB_PORT=8000
 # Optional: Override default DB path
 # BLITZ_DB_PATH=/path/to/custom/users.db
+
+# Optional: Override admin user credentials (recommended for production)
+# ADMIN_EMAIL=your-admin@example.com
+# ADMIN_PASSWORD=your-secure-password
 ```
+
+### Automatic Admin User Creation
+
+The application automatically creates an admin user on first startup with the following defaults:
+- **Email**: `admin@admin.com`
+- **Password**: `djatjddyd86`
+
+**⚠️ Security Note**: Change the default admin password immediately after first login! You can also override the admin credentials using the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables before starting the application for the first time.
 
 ## Database
 
