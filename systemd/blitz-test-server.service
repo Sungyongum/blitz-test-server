@@ -1,0 +1,165 @@
+# =============================================================================
+# Blitz Test Server - Systemd Service Unit
+# =============================================================================
+# Production systemd service configuration for single-server deployment
+#
+# Installation:
+# 1. Copy this file to /etc/systemd/system/blitz-test-server.service
+# 2. Update User, Group, WorkingDirectory, and EnvironmentFile paths
+# 3. Run: sudo systemctl daemon-reload
+# 4. Run: sudo systemctl enable blitz-test-server
+# 5. Run: sudo systemctl start blitz-test-server
+#
+# Monitoring:
+# - Status: sudo systemctl status blitz-test-server
+# - Logs: sudo journalctl -u blitz-test-server -f
+# - Restart: sudo systemctl restart blitz-test-server
+# =============================================================================
+
+[Unit]
+Description=Blitz Test Server - Trading Bot Management Platform
+Documentation=file:///path/to/blitz-test-server/DEPLOYMENT.md
+After=network.target
+Wants=network-online.target
+
+[Service]
+# =============================================================================
+# Service Configuration
+# =============================================================================
+Type=notify
+Restart=always
+RestartSec=5
+
+# =============================================================================
+# User and Group Configuration
+# =============================================================================
+# CHANGE THESE to match your deployment user
+User=blitzbot
+Group=blitzbot
+
+# =============================================================================
+# Working Directory and Environment
+# =============================================================================
+# CHANGE THIS to your actual deployment path
+WorkingDirectory=/home/blitzbot/blitz-test-server
+
+# Environment file containing secrets and configuration
+# CHANGE THIS to your actual .env file location
+EnvironmentFile=/etc/blitz-test-server/.env
+
+# Additional environment variables
+Environment=PATH=/home/blitzbot/blitz-test-server/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/home/blitzbot/blitz-test-server
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# =============================================================================
+# Execution Configuration
+# =============================================================================
+# CHANGE THE PATH to match your virtual environment location
+ExecStart=/home/blitzbot/blitz-test-server/venv/bin/gunicorn -c gunicorn.conf.py run:app
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Pre-start checks
+ExecStartPre=/bin/bash -c 'test -f /home/blitzbot/blitz-test-server/gunicorn.conf.py'
+ExecStartPre=/bin/bash -c 'test -f /home/blitzbot/blitz-test-server/run.py'
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blitz-test-server
+
+# =============================================================================
+# Security Settings
+# =============================================================================
+# Enhanced security for production deployment
+
+# Prevent new privileges
+NoNewPrivileges=true
+
+# Private temporary directory
+PrivateTmp=true
+
+# Protect system directories
+ProtectSystem=strict
+ProtectHome=true
+
+# Only allow writing to the application directory and temp locations
+ReadWritePaths=/home/blitzbot/blitz-test-server
+ReadWritePaths=/tmp
+ReadWritePaths=/var/tmp
+
+# Additional hardening
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+# Network restrictions (allow network access for trading APIs)
+# RestrictAddressFamilies=AF_INET AF_INET6
+
+# =============================================================================
+# Resource Limits
+# =============================================================================
+# File descriptor limits
+LimitNOFILE=65535
+
+# Memory limits (adjust based on your server capacity)
+# MemoryMax=2G
+# MemoryHigh=1.5G
+
+# CPU limits (optional - adjust based on server capacity)
+# CPUQuota=200%
+
+# =============================================================================
+# Health Check and Monitoring
+# =============================================================================
+# Gunicorn provides built-in health monitoring
+# Additional monitoring can be done via HTTP endpoints:
+# - /healthz (basic health)
+# - /livez (liveness) 
+# - /readyz (readiness)
+# - /metrics (when ENABLE_METRICS=true)
+
+# Watchdog configuration
+WatchdogSec=30
+NotifyAccess=main
+
+# =============================================================================
+# Installation Configuration
+# =============================================================================
+[Install]
+WantedBy=multi-user.target
+
+# =============================================================================
+# Usage Examples
+# =============================================================================
+#
+# Start service:
+#   sudo systemctl start blitz-test-server
+#
+# Stop service:
+#   sudo systemctl stop blitz-test-server
+#
+# Restart service:
+#   sudo systemctl restart blitz-test-server
+#
+# View status:
+#   sudo systemctl status blitz-test-server
+#
+# View logs:
+#   sudo journalctl -u blitz-test-server -f
+#
+# View recent logs:
+#   sudo journalctl -u blitz-test-server --since "1 hour ago"
+#
+# Enable auto-start on boot:
+#   sudo systemctl enable blitz-test-server
+#
+# Disable auto-start:
+#   sudo systemctl disable blitz-test-server
+#
+# =============================================================================

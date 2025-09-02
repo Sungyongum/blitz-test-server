@@ -576,3 +576,388 @@ EOF
 ```
 
 This completes the deployment guide for SimpleBotManager. The server should now be running securely with proper monitoring and maintenance capabilities.
+
+# Production Single-Server Deployment
+
+This section provides production-ready configuration for single-server deployment using Gunicorn, systemd, and nginx reverse proxy.
+
+## Overview
+
+This deployment approach provides:
+- **Production WSGI server**: Gunicorn with optimized worker configuration
+- **Process management**: systemd service with automatic restart and monitoring
+- **Reverse proxy**: nginx with security headers, rate limiting, and SSL support
+- **Monitoring**: Health check endpoints and optional Prometheus metrics
+- **Security**: Comprehensive security hardening and CSP headers
+
+## Quick Start for Production
+
+### Step 1: Environment Configuration
+
+Choose and copy an environment template:
+
+```bash
+# For basic production deployment
+cp .env.single-server.example .env
+
+# OR for more comprehensive configuration
+cp .env.example .env
+```
+
+**Generate a secure secret key:**
+```bash
+python -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_urlsafe(32))" >> .env.tmp
+grep FLASK_SECRET_KEY .env.tmp >> .env
+rm .env.tmp
+```
+
+**Edit .env and configure key settings:**
+```bash
+# Required - replace with your secure key
+FLASK_SECRET_KEY=your-generated-secure-key-here
+
+# Enable metrics for production monitoring (optional)
+ENABLE_METRICS=true
+
+# Configure rate limits for your load requirements
+RATE_LIMITS_START=5/minute
+RATE_LIMITS_GLOBAL=100/minute
+```
+
+### Step 2: Gunicorn Production Server
+
+**Start with Gunicorn directly:**
+```bash
+# Install gunicorn if not already installed
+pip install gunicorn
+
+# Start server using provided configuration
+gunicorn -c gunicorn.conf.py run:app
+```
+
+**Or use the convenience script:**
+```bash
+# Make executable and run
+chmod +x scripts/run_gunicorn.sh
+./scripts/run_gunicorn.sh
+```
+
+**The Gunicorn configuration provides:**
+- Optimal worker count: `(2 × CPU cores) + 1`, max 4 for single server
+- 2 threads per worker for I/O concurrency
+- 60-second timeouts with 5-second keepalive
+- Automatic worker recycling after 1000 requests
+- Logging to stdout/stderr for systemd compatibility
+
+### Step 3: Systemd Service (Recommended)
+
+**Install the service:**
+```bash
+# Copy and customize the service file
+sudo cp systemd/blitz-test-server.service /etc/systemd/system/
+
+# Edit paths and user settings
+sudo nano /etc/systemd/system/blitz-test-server.service
+```
+
+**Update these sections in the service file:**
+```ini
+# Update user and paths
+User=blitzbot
+Group=blitzbot
+WorkingDirectory=/home/blitzbot/blitz-test-server
+EnvironmentFile=/etc/blitz-test-server/.env
+ExecStart=/home/blitzbot/blitz-test-server/venv/bin/gunicorn -c gunicorn.conf.py run:app
+```
+
+**Copy environment file for systemd:**
+```bash
+sudo mkdir -p /etc/blitz-test-server
+sudo cp .env /etc/blitz-test-server/.env
+sudo chown root:root /etc/blitz-test-server/.env
+sudo chmod 600 /etc/blitz-test-server/.env
+```
+
+**Enable and start the service:**
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable blitz-test-server
+sudo systemctl start blitz-test-server
+
+# Check status
+sudo systemctl status blitz-test-server
+
+# View logs
+sudo journalctl -u blitz-test-server -f
+```
+
+### Step 4: Nginx Reverse Proxy
+
+**Install nginx:**
+```bash
+sudo apt install nginx -y
+```
+
+**Configure the reverse proxy:**
+```bash
+# Copy nginx configuration
+sudo cp nginx/blitz-test-server.conf /etc/nginx/sites-available/
+
+# Edit server configuration
+sudo nano /etc/nginx/sites-available/blitz-test-server.conf
+```
+
+**Update the server_name:**
+```nginx
+# Change this line to your domain
+server_name your-domain.com www.your-domain.com;
+```
+
+**Enable the site:**
+```bash
+sudo ln -s /etc/nginx/sites-available/blitz-test-server.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 5: SSL/TLS Setup (Recommended)
+
+**Install Certbot:**
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+```
+
+**Obtain SSL certificate:**
+```bash
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+**Update environment for HTTPS:**
+```bash
+# Edit .env to enable secure cookies
+echo "SESSION_SECURE=true" >> .env
+echo "CSRF_SSL_STRICT=true" >> .env
+
+# Restart service to apply changes
+sudo systemctl restart blitz-test-server
+```
+
+## Health Monitoring
+
+The application provides several monitoring endpoints:
+
+### Health Check Endpoints
+
+- `GET /healthz` - Basic health check (returns 200 if app is running)
+- `GET /livez` - Liveness check (database connectivity)
+- `GET /readyz` - Readiness check (all services ready)
+
+### Prometheus Metrics (Optional)
+
+When `ENABLE_METRICS=true`:
+- `GET /metrics` - Prometheus metrics endpoint
+- Includes request metrics, response times, error rates
+- Multiprocess-safe for Gunicorn workers
+
+### Log Monitoring
+
+**Application logs (via systemd):**
+```bash
+# Real-time logs
+sudo journalctl -u blitz-test-server -f
+
+# Recent logs
+sudo journalctl -u blitz-test-server --since "1 hour ago"
+
+# Error logs only
+sudo journalctl -u blitz-test-server -p err
+```
+
+**Nginx logs:**
+```bash
+# Access logs
+sudo tail -f /var/log/nginx/blitz-test-server-access.log
+
+# Error logs
+sudo tail -f /var/log/nginx/blitz-test-server-error.log
+```
+
+## Performance Tuning
+
+### Gunicorn Workers
+
+Adjust worker count based on your server:
+```python
+# In gunicorn.conf.py
+workers = min(multiprocessing.cpu_count() * 2 + 1, 4)  # Current setting
+workers = 6  # For higher traffic
+```
+
+### Database Optimization
+
+The app uses SQLite with optimized settings:
+- WAL mode for concurrent reads
+- 20MB cache size
+- 30-second busy timeout
+- Memory temp storage
+
+For high traffic, consider PostgreSQL:
+```bash
+# Example environment for PostgreSQL
+# DATABASE_URL=postgresql://user:pass@localhost/blitzdb
+```
+
+### Rate Limiting
+
+Adjust rate limits in `.env`:
+```bash
+# More restrictive for high-security environments
+RATE_LIMITS_START=3/minute
+RATE_LIMITS_GLOBAL=50/minute
+
+# More permissive for internal deployments  
+RATE_LIMITS_START=20/minute
+RATE_LIMITS_GLOBAL=500/minute
+```
+
+## Security Hardening
+
+### File Permissions
+```bash
+# Secure application directory
+sudo chown -R blitzbot:blitzbot /home/blitzbot/blitz-test-server
+sudo chmod 600 .env
+sudo chmod 700 instance/
+```
+
+### Firewall Configuration
+```bash
+# Allow only necessary ports
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw --force enable
+
+# Deny direct access to application port
+sudo ufw deny 8000/tcp
+```
+
+### Additional Security
+
+The configuration includes:
+- Security headers (X-Frame-Options, X-Content-Type-Options, CSP)
+- Rate limiting at nginx level
+- Session security with secure cookies (HTTPS)
+- Process isolation via systemd security settings
+- Request size limits
+
+## Troubleshooting
+
+### Common Issues
+
+**Service won't start:**
+```bash
+# Check service status
+sudo systemctl status blitz-test-server
+
+# Check logs for errors
+sudo journalctl -u blitz-test-server --since "10 minutes ago"
+
+# Validate configuration
+cd /home/blitzbot/blitz-test-server
+./scripts/run_gunicorn.sh --dry-run
+```
+
+**Database errors:**
+```bash
+# Check database permissions
+ls -la instance/
+sudo -u blitzbot ls -la instance/
+
+# Test database connectivity
+sudo -u blitzbot python -c "
+from Blitz_app import create_app
+app = create_app()
+with app.app_context():
+    from Blitz_app.models import User
+    print(f'Users: {User.query.count()}')
+"
+```
+
+**Nginx issues:**
+```bash
+# Test nginx configuration
+sudo nginx -t
+
+# Check error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Test backend connectivity
+curl http://127.0.0.1:8000/healthz
+```
+
+### Performance Issues
+
+**High memory usage:**
+- Reduce Gunicorn workers or max_requests
+- Check for memory leaks in application code
+- Monitor with: `sudo systemctl status blitz-test-server`
+
+**Slow response times:**
+- Check database performance
+- Review nginx access logs for slow requests
+- Monitor with: `curl -w "@curl-format.txt" http://localhost/healthz`
+
+**High CPU usage:**
+- Reduce worker threads
+- Check for inefficient database queries
+- Monitor with: `top -p $(pgrep -f gunicorn)`
+
+## Maintenance
+
+### Regular Tasks
+
+**Weekly:**
+- Review application and nginx logs
+- Check disk space: `df -h`
+- Update system packages: `sudo apt update && sudo apt upgrade`
+
+**Monthly:**
+- Rotate logs if not using logrotate
+- Review security headers and certificates
+- Test backup and restore procedures
+
+**Database Backup:**
+```bash
+# Backup SQLite database
+sudo -u blitzbot cp instance/users.db instance/users.db.backup.$(date +%Y%m%d)
+
+# Automated backup script
+cat > backup_db.sh << 'EOF'
+#!/bin/bash
+sudo -u blitzbot cp instance/users.db instance/users.db.backup.$(date +%Y%m%d_%H%M%S)
+find instance/ -name "users.db.backup.*" -mtime +7 -delete
+EOF
+chmod +x backup_db.sh
+```
+
+### Log Rotation
+
+```bash
+# Create logrotate configuration
+sudo tee /etc/logrotate.d/blitz-test-server << 'EOF'
+/var/log/nginx/blitz-test-server-*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    postrotate
+        systemctl reload nginx
+    endscript
+}
+EOF
+```
+
+This completes the production deployment guide. The server should now be running securely with proper monitoring, logging, and maintenance capabilities.
