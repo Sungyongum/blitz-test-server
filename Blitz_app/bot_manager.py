@@ -8,6 +8,8 @@ import logging
 import signal
 import subprocess
 import stat
+import atexit
+import threading
 from datetime import datetime, timedelta
 from threading import Thread, Event
 from typing import Dict, Optional
@@ -604,8 +606,12 @@ def run_bot_manager(app):
         logger.info(f"Received signal {signum}, stopping bot manager")
         manager.stop()
     
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    if threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+    else:
+        logger.warning("Not running in main thread; skipping signal handler installation for BotManager")
+        atexit.register(manager.stop)
     
     try:
         manager.run()
