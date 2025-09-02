@@ -1,4 +1,4 @@
-""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -26,9 +26,11 @@
       <td>{{ p.username }}</td>
       <td>
         <form method="POST" action="{{ url_for('main.force_unassign_proxy', proxy_id=p.id) }}" style="display:inline;" onsubmit="return confirm('정말로 이 프록시를 초기화하시겠습니까?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
           <button type="submit">강제 초기화</button>
         </form>
         <form method="POST" action="{{ url_for('main.force_reassign_proxy', proxy_id=p.id) }}" style="display:inline;" onsubmit="return confirm('이 프록시를 미사용 상태로 이동하시겠습니까?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
           <button type="submit">재할당</button>
         </form>
       </td>
@@ -51,4 +53,4 @@
   </table>
 
 </body>
-</html>""
+</html>

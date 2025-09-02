@@ -44,6 +44,7 @@
     <h4 class="card-title text-center mb-4">회원가입</h4>
 
     <form method="post" action="{{ url_for('main.register') }}" id="regForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
         <div class="form-group">
         <label for="exchange">거래소 선택</label>
         <select id="exchange" name="exchange" class="form-control" required>

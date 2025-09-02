@@ -45,6 +45,7 @@
         {% for u in users %}
         <tr data-user-id="{{ u.id }}">
           <form method="POST" action="{{ url_for('main.admin_update_user', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
             <td>
               <a href="{{ url_for('main.admin_user_detail', user_id=u.id) }}">
                 {{ u.email }}
@@ -125,6 +126,7 @@
 
               {% if proxies.get(u.id) and u.email != 'admin@admin.com' %}
               <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=u.id) }}" style="margin-top: 4px;" onsubmit="return confirm('정말로 프록시를 해제하시겠습니까?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
                 <button type="submit" class="btn btn-outline-light btn-sm">프록시 해제</button>
               </form>
               {% elif proxies.get(u.id) and u.email == 'admin@admin.com' %}
@@ -185,6 +187,7 @@
         {% for u in users %}
         <tr>
           <form method="POST" action="{{ url_for('main.admin_update_user', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
             <td>{{ u.email }}</td>
             <td>
               <select name="exchange" class="form-control form-control-sm">
@@ -261,6 +264,7 @@
 
               {% if proxies.get(u.id) and u.email != 'admin@admin.com' %}
               <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=u.id) }}" style="margin-top: 4px;" onsubmit="return confirm('정말로 프록시를 해제하시겠습니까?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
                 <button type="submit" class="btn btn-outline-light btn-sm">프록시 해제</button>
               </form>
               {% elif proxies.get(u.id) and u.email == 'admin@admin.com' %}

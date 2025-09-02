@@ -94,6 +94,7 @@
 
           <!-- 🔧 AJAX로 직렬화해서 쓰기 위해 id 부여 -->
           <form id="settings-form" action="{{ url_for('main.index') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
             <h6>환영합니다, {{ current_user.email }} 님</h6>
             <p class="mb-2"><b>거래소:</b>
               <span class="badge badge-warning">

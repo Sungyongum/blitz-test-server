@@ -31,6 +31,7 @@
           <td>{{ proxy.id }}</td>
           <td>
             <form method="POST" action="{{ url_for('main.update_proxy', proxy_id=proxy.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
               <input type="text" name="ip" value="{{ proxy.ip }}" class="form-control form-control-sm" required>
           </td>
           <td>
@@ -55,6 +56,7 @@
               {% set assigned_user = users_map.get(proxy.assigned_user_id) %}
               {% if assigned_user and assigned_user.email != 'admin@admin.com' %}
                 <form method="POST" action="{{ url_for('main.unassign_proxy', user_id=proxy.assigned_user_id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
                   <button type="submit" class="btn btn-sm btn-warning">할당 해제</button>
                 </form>
               {% else %}
@@ -71,6 +73,7 @@
 
     <h5 class="mt-4">새 프록시 등록</h5>
     <form method="POST" action="{{ url_for('main.add_proxy') }}" class="row g-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
       <div class="col"><input name="ip" placeholder="IP" class="form-control form-control-sm" required></div>
       <div class="col"><input name="port" placeholder="Port" class="form-control form-control-sm" required></div>
       <div class="col"><input name="username" placeholder="Username" class="form-control form-control-sm" required></div>

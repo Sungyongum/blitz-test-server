@@ -22,6 +22,7 @@
     <div class="panel mx-auto" style="max-width:600px;">
       <h5 class="mb-4">✏️ 포지션 설정 수정 (ID {{ cfg.id }})</h5>
       <form action="{{ url_for('main.edit_config', config_id=cfg.id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
         <div class="form-row">
           <div class="form-group col">
             <label>심볼</label>
