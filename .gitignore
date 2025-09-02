@@ -23,3 +23,5 @@ flask_session/
 
 # Trade log
 trade_log.json
+.env.local
+.env.production
