@@ -75,8 +75,6 @@ def skip_health_checks(record):
             return False
     return True
 
-# Apply the filter
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
 # =============================================================================
 # Process Configuration
