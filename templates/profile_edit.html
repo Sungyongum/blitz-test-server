@@ -54,6 +54,7 @@
       <h4 class="card-title text-center mb-4">회원정보 수정</h4>
 
       <form method="post" action="{{ url_for('main.edit_profile') }}" id="profileForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
         <!-- 현재 비밀번호 확인 -->
         <div class="form-group">
           <label for="current_password">현재 비밀번호</label>
