@@ -104,8 +104,6 @@ limit_request_fields = 100
 # Performance Tuning
 # =============================================================================
 
-# Preload the application code before forking workers
-preload_app = True
 
 # Enable reusing of sockets
 reuse_port = True
