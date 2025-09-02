@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime
 from flask_session import Session
 from redis import from_url
+from sqlalchemy import select
 from .extensions import db, login_manager
 from .models import User, Trade, BotCommand, BotEvent, UserBot, OrderPlan, PnlSnapshot
 from .routes import main
@@ -108,7 +109,11 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-        if not User.query.filter_by(email='admin@admin.com').first():
+        admin_exists = db.session.execute(
+            select(User.id).filter_by(email='admin@admin.com')
+        ).scalar() is not None
+
+        if not admin_exists:
             admin_user = User(
                 email='admin@admin.com',
                 telegram_token='ADMIN_TELEGRAM_TOKEN',
