@@ -11,6 +11,8 @@ from datetime import datetime
 from flask_session import Session
 from redis import from_url
 from sqlalchemy import select
+import os
+import logging
 from .extensions import db, login_manager
 from .models import User, Trade, BotCommand, BotEvent, UserBot, OrderPlan, PnlSnapshot
 from .routes import main
@@ -19,12 +21,67 @@ from .models.proxy_model import Proxy
 
 
 
-# ✅ 함수 정의 먼저
 def datetimeformat(value):
     try:
         return datetime.fromtimestamp(value / 1000).strftime('%Y-%m-%d %H:%M:%S')
     except:
         return str(value)
+
+
+def seed_admin_user(app):
+    """
+    Seed admin user if it doesn't exist.
+    
+    Reads ADMIN_EMAIL and ADMIN_PASSWORD from environment variables.
+    Falls back to 'admin@admin.com' and 'djatjddyd86' if not set.
+    
+    This function is idempotent - safe to run multiple times.
+    """
+    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@admin.com')
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'djatjddyd86')
+    
+    try:
+        # Check if admin user already exists
+        admin_exists = db.session.execute(
+            select(User.id).filter_by(email=admin_email)
+        ).scalar() is not None
+        
+        if admin_exists:
+            logging.info(f"Admin user {admin_email} already exists, skipping creation")
+            return
+        
+        # Create new admin user
+        admin_user = User(
+            email=admin_email,
+            telegram_token='ADMIN_TELEGRAM_TOKEN',
+            telegram_chat_id='000000000',
+            api_key='API_KEY_PLACEHOLDER',
+            api_secret='API_SECRET_PLACEHOLDER',                
+            uid='ADMIN_UID',
+            symbol='BTC/USDT',
+            side='long',
+            take_profit='1%',
+            stop_loss='0%',
+            leverage=1,
+            rounds=1,
+            repeat=False,
+            grids=[],
+            verification_token=None,
+            skip_uid_check=True
+        )
+        admin_user.set_password(admin_password)
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        logging.info(f"✅ Admin user {admin_email} created successfully")
+        print(f"✅ Admin user {admin_email} created successfully")
+        
+    except Exception as e:
+        logging.error(f"Failed to seed admin user: {e}")
+        print(f"❌ Failed to seed admin user: {e}")
+        # Don't re-raise - app should continue to work even if admin seeding fails
+        db.session.rollback()
+
 
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
@@ -108,33 +165,8 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-
-        admin_exists = db.session.execute(
-            select(User.id).filter_by(email='admin@admin.com')
-        ).scalar() is not None
-
-        if not admin_exists:
-            admin_user = User(
-                email='admin@admin.com',
-                telegram_token='ADMIN_TELEGRAM_TOKEN',
-                telegram_chat_id='000000000',
-                api_key='API_KEY_PLACEHOLDER',
-                api_secret='API_SECRET_PLACEHOLDER',                
-                uid='ADMIN_UID',
-                symbol='BTC/USDT',
-                side='long',
-                take_profit='1%',
-                stop_loss='0%',
-                leverage=1,
-                rounds=1,
-                repeat=False,
-                grids=[],
-                verification_token=None,
-                skip_uid_check=True
-            )
-            admin_user.set_password('djatjddyd86')
-            db.session.add(admin_user)
-            db.session.commit()
-            print("✅ admin@admin.com 계정 자동 생성 완료")
+        
+        # Seed admin user (idempotent)
+        seed_admin_user(app)
 
     return app
