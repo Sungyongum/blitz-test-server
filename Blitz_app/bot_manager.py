@@ -12,7 +12,7 @@ import atexit
 import threading
 from datetime import datetime, timedelta
 from threading import Thread, Event
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import psutil
 
 from .extensions import db
